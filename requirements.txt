@@ -5,3 +5,5 @@ plotly
 duckdb
 openpyxl
 scikit-learn
+requests
+io
