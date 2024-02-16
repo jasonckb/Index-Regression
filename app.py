@@ -34,7 +34,7 @@ def format_date_column(date_val):
 
 
 # Dropbox direct download link
-dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx"
+dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx?dl=1"
 
 # Function to load data from Dropbox
 @st.cache(show_spinner=False)
