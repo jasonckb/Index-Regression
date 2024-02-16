@@ -37,7 +37,7 @@ def format_date_column(date_val):
 dropbox_url = "https://www.dropbox.com/scl/fi/88utrb82zwzlbyo3ljkvl/HSI_SPX-Dashboard.xlsx?rlkey=jobmxd040dyhhs07k9gpmbq6j&dl=1"
 
 # Function to load data from Dropbox
-@st.cache(show_spinner=False)
+@st.experimental_memo(show_spinner=False)
 def load_data_from_dropbox(url, sheet_name, nrows=None):
     try:
         response = requests.get(url)
