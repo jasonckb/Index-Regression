@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import plotly.graph_objects as go
+import requests
+from io import BytesIO
+
 
 # Function to apply numeric formatting for decimal numbers without decimal places
 def format_decimal(value):
@@ -29,6 +32,20 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
+# Dropbox direct download link
+dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx?dl=1"  # Ensure this is the direct download link
+
+# Function to load data from Dropbox
+@st.cache(show_spinner=False)
+def load_data_from_dropbox(url, sheet_name, nrows=None):
+    response = requests.get(url)
+    if response.status_code == 200:
+        file_stream = BytesIO(response.content)
+        return pd.read_excel(file_stream, sheet_name=sheet_name, nrows=nrows)
+    else:
+        st.error("Failed to download the file from Dropbox. Please check the URL or try again later.")
+        return None
+
 # Main page setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", page_icon=":bar_chart:", layout="wide")
 st.title("HSI and SPX Statistical Analysis")
@@ -42,20 +59,26 @@ month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb"
 # Add a Monthly Open user input in the sidebar
 monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
 
-# Load data
-file_path = 'C:/Users/user/Desktop/HSI_SPX Dashboard.xlsx'
+# Define the sheet names based on the index_choice
 price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
-df_price = pd.read_excel(file_path, sheet_name=price_sheet_name)
-df_stats = pd.read_excel(file_path, sheet_name=stats_sheet_name, nrows=14)
 
-# Load Hang Seng Index data
-df_hsi = pd.read_excel(file_path, sheet_name='HSI Raw')
-df_hsi['Date'] = pd.to_datetime(df_hsi['Date'])
+# Load the data
+df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name)
+df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
 
-# Load S&P 500 data
-df_sp500 = pd.read_excel(file_path, sheet_name='SP500 Raw')
-df_sp500['Date'] = pd.to_datetime(df_sp500['Date'])
+# Check if data is loaded before proceeding
+if df_price is not None and df_stats is not None:
+    # Process and format the price history DataFrame
+    # Process and format the statistics DataFrame
+    # ... [The rest of your processing and formatting code]
+    
+    # Display the data in Streamlit
+    with st.expander(f"View {index_choice} Price History", expanded=False):
+        st.dataframe(df_price)
+
+    with st.expander(f"View {index_choice} Statistics", expanded=True):
+        st.dataframe(df_stats)
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
@@ -174,7 +197,7 @@ with st.expander(f"View {index_choice} Statistics", expanded=True):
 
 # Load the prediction data based on the selected index
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'
-df_pred = pd.read_excel(file_path, sheet_name=pred_sheet_name)
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
 
 # Find the row with the selected month
 month_row = df_pred.loc[df_pred['Month'] == month_choice]
