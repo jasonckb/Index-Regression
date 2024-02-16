@@ -4,4 +4,4 @@ numpy
 plotly
 duckdb
 openpyxl
-sklearn
+scikit-learn
