@@ -39,13 +39,17 @@ dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dash
 # Function to load data from Dropbox
 @st.cache(show_spinner=False)
 def load_data_from_dropbox(url, sheet_name, nrows=None):
-    response = requests.get(url)
-    if response.status_code == 200:
-        file_stream = BytesIO(response.content)
-        df = pd.read_excel(file_stream, sheet_name=sheet_name, nrows=nrows)
-        return df
-    else:
-        st.error("Failed to download the file from Dropbox. Please check the URL or try again later.")
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            file_stream = BytesIO(response.content)
+            df = pd.read_excel(file_stream, sheet_name=sheet_name, nrows=nrows)
+            return df
+        else:
+            st.error(f"Failed to download the file. Status code: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
         return None
 
 
