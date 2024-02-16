@@ -73,9 +73,9 @@ stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # Ensure this is correctly defined
 
 # Load the data
-df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name)
-df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
-df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)  # Ensure pred_sheet_name is defined before this line
+df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name).copy
+df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14).copy
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name).copy  # Ensure pred_sheet_name is defined before this line
 
 # Verify data is loaded
 if df_price is None or df_stats is None or df_pred is None:
