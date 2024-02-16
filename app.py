@@ -32,59 +32,37 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
-# Function to download and load data from Dropbox
+# Function to load data from Dropbox
 @st.cache(show_spinner=False)
 def load_data_from_dropbox(url, sheet_name, nrows=None):
     response = requests.get(url)
     if response.status_code == 200:
         file_stream = BytesIO(response.content)
-        return pd.read_excel(file_stream, sheet_name=sheet_name, nrows=nrows)
+        df = pd.read_excel(file_stream, sheet_name=sheet_name, nrows=nrows)
+        return df
     else:
         st.error("Failed to download the file from Dropbox. Please check the URL or try again later.")
         return None
-
-# Function definitions for formatting
-def format_decimal(value):
-    if pd.isnull(value):
-        return None
-    try:
-        return f"{value:,.0f}"
-    except ValueError:
-        return value
-
-def format_percentage(value):
-    if pd.isnull(value):
-        return None
-    try:
-        return f"{value:.1%}"
-    except ValueError:
-        return value
-
-def format_date_column(date_val):
-    date = pd.to_datetime(date_val, errors='coerce')
-    if date is not pd.NaT:
-        return date.strftime('%b-%y')
-    return date_val
 
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
 st.title("HSI and SPX Statistical Analysis")
 
-# Sidebar configuration
+# Sidebar for user inputs
 index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
 month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
 monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
 
-# Define sheet names based on index choice
+# Define the sheet names based on the index_choice
 price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
-pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'
+pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # Ensure this is correctly defined
 
 # Load the data
 df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name)
 df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
-df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)  # Ensure pred_sheet_name is defined before this line
 
 # Verify data is loaded
 if df_price is None or df_stats is None or df_pred is None:
@@ -96,13 +74,7 @@ df_price['Date'] = pd.to_datetime(df_price['Date']).dt.strftime('%Y-%m-%d')
 df_price.sort_values(by='Date', ascending=False, inplace=True)
 df_stats.drop(columns=["Average IR"], errors='ignore', inplace=True)
 # Further processing and formatting based on your existing logic
-# Regression plots
-if index_choice == "HSI" and df_price is not None:
-    regression_fig = plot_index_regression(df_price, "Hang Seng Index")
-    st.plotly_chart(regression_fig, use_container_width=True)
-elif index_choice == "SPX" and df_price is not None:
-    regression_fig = plot_index_regression(df_price, "S&P 500")
-    st.plotly_chart(regression_fig, use_container_width=True)
+
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
