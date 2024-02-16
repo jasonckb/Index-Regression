@@ -182,10 +182,10 @@ with st.expander(f"View {index_choice} Price History", expanded=False):
 
 # Call the regression plot function and display it
 if index_choice == "HSI":
-    regression_fig = plot_index_regression(df_hsi, "Hang Seng Index")
+    regression_fig = plot_index_regression(df_price, "Hang Seng Index")
     st.plotly_chart(regression_fig, use_container_width=True)
 elif index_choice == "SPX":
-    regression_fig = plot_index_regression(df_sp500, "S&P 500")
+    regression_fig = plot_index_regression(df_price, "S&P 500")
     st.plotly_chart(regression_fig, use_container_width=True)
 
 
