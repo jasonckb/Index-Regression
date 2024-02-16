@@ -32,8 +32,8 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
-# Dropbox direct download link
-dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx?dl=1"  # Ensure this is the direct download link
+# Define Dropbox URL for the Excel file
+dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx?dl=1"
 
 # Function to load data from Dropbox
 @st.cache(show_spinner=False)
@@ -46,39 +46,67 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error("Failed to download the file from Dropbox. Please check the URL or try again later.")
         return None
 
-# Main page setup
-st.set_page_config(page_title="HSI and SPX Statistical Analysis", page_icon=":bar_chart:", layout="wide")
-st.title("HSI and SPX Statistical Analysis")
+# Function definitions for formatting
+def format_decimal(value):
+    if pd.isnull(value):
+        return None
+    try:
+        return f"{value:,.0f}"
+    except ValueError:
+        return value
 
-# Sidebar options for Index selection
-index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"], index=0)
+def format_percentage(value):
+    if pd.isnull(value):
+        return None
+    try:
+        return f"{value:.1%}"
+    except ValueError:
+        return value
 
-# Add a Month selection option in the sidebar
-month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+def format_date_column(date_val):
+    date = pd.to_datetime(date_val, errors='coerce')
+    if date is not pd.NaT:
+        return date.strftime('%b-%y')
+    return date_val
 
-# Add a Monthly Open user input in the sidebar
-monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
+# Function to perform linear regression and plot
+def plot_index_regression(df, index_name):
+    # Your existing code for plotting regression
 
-# Define the sheet names based on the index_choice
+# Main app setup
+st.set_page_config(page_title="HSI and SPX Statistics", layout="wide")
+st.title("HSI and SPX Statistics")
+
+index_choice = st.sidebar.selectbox("Select Index", ["HSI", "SPX"])
+month_choice = st.sidebar.selectbox("Select Month", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+monthly_open = st.sidebar.number_input("Monthly Open", min_value=0.0, format="%.2f")
+
+# Define sheet names and load data
 price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 
-# Load the data
 df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name)
 df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
 
-# Check if data is loaded before proceeding
+# Process and display the price history and statistics DataFrames
 if df_price is not None and df_stats is not None:
-    # Process and format the price history DataFrame
-    # Process and format the statistics DataFrame
-    # ... [The rest of your processing and formatting code]
-    
-    # Display the data in Streamlit
-    with st.expander(f"View {index_choice} Price History", expanded=False):
-        st.dataframe(df_price)
+    # Your code to process and display df_price and df_stats
 
-    with st.expander(f"View {index_choice} Statistics", expanded=True):
-        st.dataframe(df_stats)
+# Load and process prediction data
+pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
+
+if df_pred is not None:
+    month_row = df_pred.loc[df_pred['Month'] == month_choice].iloc[0]
+    # Your code to display predictions in the sidebar
+
+# Regression plots
+if index_choice == "HSI" and df_price is not None:
+    regression_fig = plot_index_regression(df_price, "Hang Seng Index")
+    st.plotly_chart(regression_fig, use_container_width=True)
+elif index_choice == "SPX" and df_price is not None:
+    regression_fig = plot_index_regression(df_price, "S&P 500")
+    st.plotly_chart(regression_fig, use_container_width=True)
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
@@ -195,9 +223,6 @@ with st.expander(f"View {index_choice} Statistics", expanded=True):
     st.dataframe(df_stats)
 
 
-# Load the prediction data based on the selected index
-pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'
-df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
 
 # Find the row with the selected month
 month_row = df_pred.loc[df_pred['Month'] == month_choice]
