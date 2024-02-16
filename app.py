@@ -66,9 +66,6 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
-# Function to perform linear regression and plot
-def plot_index_regression(df, index_name):
-    # Your existing code for plotting regression
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
