@@ -32,6 +32,10 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
+
+# Dropbox direct download link
+dropbox_url = "https://www.dropbox.com/scl/fi/qpgd5h8oyq4oeem9r8ung/HSI_SPX-Dashboard.xlsx?dl=1"
+
 # Function to load data from Dropbox
 @st.cache(show_spinner=False)
 def load_data_from_dropbox(url, sheet_name, nrows=None):
@@ -53,6 +57,11 @@ st.title("HSI and SPX Statistical Analysis")
 index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
 month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
 monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
+
+# Define the sheet names based on the index_choice
+price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
+stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
+pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # This line defines pred_sheet_name
 
 # Define the sheet names based on the index_choice
 price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
