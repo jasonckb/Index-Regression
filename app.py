@@ -97,6 +97,16 @@ df_price.sort_values(by='Date', ascending=False, inplace=True)
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
+
+    # Convert 'Index Level' to numeric and drop NaNs
+    df['Index Level'] = pd.to_numeric(df['Index Level'], errors='coerce')
+    df = df.dropna(subset=['Index Level'])
+
+    # Check if 'Index Level' has only positive values
+    if not df['Index Level'].gt(0).all():
+        st.error("All 'Index Level' values must be positive for logarithmic transformation.")
+        return None
+    
     n = len(df)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
     y = np.log(df['Index Level']).values  # Logarithmic transformation of the index level
