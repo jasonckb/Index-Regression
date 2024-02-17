@@ -7,4 +7,3 @@ openpyxl
 scikit-learn
 requests
 yfinance
-
