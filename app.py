@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 import requests
 from io import BytesIO
 
-
 # Function to apply numeric formatting for decimal numbers without decimal places
 def format_decimal(value):
     if pd.isnull(value):
@@ -32,7 +31,6 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
-
 # Dropbox direct download link
 dropbox_url = "https://www.dropbox.com/scl/fi/88utrb82zwzlbyo3ljkvl/HSI_SPX-Dashboard.xlsx?rlkey=jobmxd040dyhhs07k9gpmbq6j&dl=1"
 
@@ -51,7 +49,6 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
     except Exception as e:
         st.error(f"An error occurred: {e}")
         return None
-
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
@@ -86,8 +83,6 @@ if df_price is None or df_stats is None or df_pred is None:
 df_price['Date'] = pd.to_datetime(df_price['Date']).dt.strftime('%Y-%m-%d')
 df_price.sort_values(by='Date', ascending=False, inplace=True)
 df_stats.drop(columns=["Average IR"], errors='ignore', inplace=True)
-# Further processing and formatting based on your existing logic
-
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
@@ -109,8 +104,7 @@ def plot_index_regression(df, index_name):
     conf_levels = {
         1: "68.27%",
         2: "95.45%",
-        3: "99.73%",
-        
+        3: "99.73%",        
     }
 
 # Plotting the results using Plotly
@@ -166,9 +160,9 @@ df_price = df_price.sort_values(by='Date', ascending=False)
 # Process and format the statistics DataFrame
 df_stats.drop(columns=["Average IR"], inplace=True, errors='ignore')
 
-# Drop unnamed columns 16 to 31
+# Drop unnamed columns 16 to 32
 for col in df_stats.columns:
-    if "Unnamed:" in col and 16 <= int(col.split(':')[1]) <= 31:
+    if "Unnamed:" in col and 16 <= int(col.split(':')[1]) <= 32:
         df_stats.drop(columns=[col], inplace=True)
 
 # Apply specific formatting to designated columns
@@ -179,11 +173,15 @@ date_columns = ['Date of Largest Rise', 'Date of Largest Drop']  # Specify date 
 # Apply formatting
 for col in df_stats.columns:
     if col in decimal_columns:
-        df_stats[col] = df_stats[col].apply(format_decimal)
+        df_stats[col] = df_stats[col].apply(format_decimal)        
     elif col in percentage_columns:
         df_stats[col] = df_stats[col].apply(format_percentage)
     elif col in date_columns:
         df_stats[col] = df_stats[col].apply(format_date_column)
+
+for col in df_price.columns:
+    if col in decimal_columns:        
+        df_stats[col] = df_price[col].apply(format_decimal)
 
 # Display the data in Streamlit for Price History
 with st.expander(f"View {index_choice} Price History", expanded=False):
