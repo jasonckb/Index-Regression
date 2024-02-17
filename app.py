@@ -25,7 +25,7 @@ def format_percentage(value):
     except ValueError:
         return value  # If conversion fails, return the original value
 
-# Function to format date columns in "MMM-YY" format, unchanged from previous code
+# Function to format date columns in "MMM-YY" format
 def format_date_column(date_val):
     date = pd.to_datetime(date_val, errors='coerce')
     if date is not pd.NaT:
@@ -166,15 +166,15 @@ df_price = df_price.sort_values(by='Date', ascending=False)
 # Process and format the statistics DataFrame
 df_stats.drop(columns=["Average IR"], inplace=True, errors='ignore')
 
-# Drop unnamed columns 16 to 20
+# Drop unnamed columns 16 to 31
 for col in df_stats.columns:
-    if "Unnamed:" in col and 16 <= int(col.split(':')[1]) <= 20:
+    if "Unnamed:" in col and 16 <= int(col.split(':')[1]) <= 31:
         df_stats.drop(columns=[col], inplace=True)
 
 # Apply specific formatting to designated columns
 decimal_columns = ['Index Level','Average Range (5 years)', 'Average Range', 'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 'Largest Rise', 'Largest Drop']  # Specify decimal columns
 percentage_columns = ['Rise: Fall','Avg. Up Wick %','Avg Down Wick%','Body %']  # Specify percentage columns
-date_columns = ['Date of Largest Rise', 'Time of the Drop']  # Specify date columns
+date_columns = ['Date of Largest Rise', 'Date of Largest Drop']  # Specify date columns
 
 # Apply formatting
 for col in df_stats.columns:
@@ -197,13 +197,9 @@ elif index_choice == "SPX":
     regression_fig = plot_index_regression(df_price, "S&P 500")
     st.plotly_chart(regression_fig, use_container_width=True)
 
-
-
 # Display the data in Streamlit for Statistics
 with st.expander(f"View {index_choice} Statistics", expanded=True):
     st.dataframe(df_stats)
-
-
 
 # Find the row with the selected month
 month_row = df_pred.loc[df_pred['Month'] == month_choice]
