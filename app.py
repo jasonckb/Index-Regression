@@ -79,10 +79,21 @@ if df_price is None or df_stats is None or df_pred is None:
     st.error("Failed to load data. Please check the Dropbox link and try again.")
     st.stop()
 
+desired_columns = [
+    'Month', 'Average Range (5 years)', 'Average Range', 
+    'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 
+    'Largest Rise', 'Largest Drop', 'Date of Largest Rise', 
+    'Time of the Drop', 'Rise: Fall', 'Avg. Up Wick %', 
+    'Avg Down Wick%', 'Body %'
+]
+
+# Select only the desired columns
+df_stats = df_stats[desired_columns]
+
 # Process and format dataframes
 df_price['Date'] = pd.to_datetime(df_price['Date']).dt.strftime('%Y-%m-%d')
 df_price.sort_values(by='Date', ascending=False, inplace=True)
-df_stats.drop(columns=["Average IR"], errors='ignore', inplace=True)
+#df_stats.drop(columns=["Average IR"], errors='ignore', inplace=True)
 
 # Function to perform linear regression and plot results with logarithmic transformation
 def plot_index_regression(df, index_name):
@@ -159,11 +170,6 @@ df_price = df_price.sort_values(by='Date', ascending=False)
 
 # Process and format the statistics DataFrame
 df_stats.drop(columns=["Average IR"], inplace=True, errors='ignore')
-
-# Drop unnamed columns 16 to 32
-for col in df_stats.columns:
-    if "Unnamed:" in col and 16 <= int(col.split(':')[1]) <= 32:
-        df_stats.drop(columns=[col], inplace=True)
 
 # Apply specific formatting to designated columns
 decimal_columns = ['Index Level','Average Range (5 years)', 'Average Range', 'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 'Largest Rise', 'Largest Drop']  # Specify decimal columns
