@@ -35,7 +35,7 @@ def format_date_column(date_val):
 dropbox_url = "https://www.dropbox.com/scl/fi/88utrb82zwzlbyo3ljkvl/HSI_SPX-Dashboard.xlsx?rlkey=jobmxd040dyhhs07k9gpmbq6j&dl=1"
 
 # Function to load data from Dropbox
-@st.experimental_memo(show_spinner=False)
+@st.cache_data(show_spinner=False)
 def load_data_from_dropbox(url, sheet_name, nrows=None):
     try:
         response = requests.get(url)
@@ -84,7 +84,7 @@ desired_columns = [
     'Month of Year', 'Average Range (5 years)', 'Average Range', 
     'No. of Rise', 'Avg Rise', 'No. of Fall', 'Avg Fall', 
     'Largest Rise', 'Largest Drop', 'Date of Largest Rise', 
-    'Time of the Drop', 'Rise: Fall', 'Avg. Up Wick %', 
+    'Date of Largest Drop', 'Rise: Fall', 'Avg. Up Wick %', 
     'Avg Down Wick%', 'Body %'
 ]
 # Select only the desired columns
