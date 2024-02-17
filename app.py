@@ -9,7 +9,7 @@ import yfinance as yf
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
-st.title("HSI and SPX Statistical Analysis")
+st.title("HSI and SPX Statistical Analysis by Jason Chan")
 
 # Function to apply numeric formatting for decimal numbers without decimal places
 def format_decimal(value):
