@@ -1,8 +1,11 @@
 streamlit
-pandas
+yfinance
 numpy
+pandas
 plotly
 openpyxl
 scikit-learn
 requests
-yfinance
+
+
+
