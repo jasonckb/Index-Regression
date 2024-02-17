@@ -5,6 +5,11 @@ from sklearn.linear_model import LinearRegression
 import plotly.graph_objects as go
 import requests
 from io import BytesIO
+import yfinance as yf
+
+# Main app setup
+st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
+st.title("HSI and SPX Statistical Analysis")
 
 # Function to apply numeric formatting for decimal numbers without decimal places
 def format_decimal(value):
@@ -31,6 +36,36 @@ def format_date_column(date_val):
         return date.strftime('%b-%y')
     return date_val
 
+# Function to fetch data from Yahoo Finance and format it
+def fetch_and_format_data(ticker):
+    # Fetch data
+    data = yf.download(ticker, start="1970-01-01")
+     
+    # Ensure date is the index, then reset it to make it a column
+    data.reset_index(inplace=True)
+
+    # Format the Date column
+    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
+
+    # Sort data by Date in descending order to show the latest data first
+    data.sort_values(by='Date', ascending=False, inplace=True)
+
+    return data
+
+# Select ticker based on user choice
+index_tickers = {
+    "HSI": "^HSI",  # Hang Seng Index ticker symbol
+    "SPX": "^GSPC"  # S&P 500 ticker symbol
+}
+
+# Sidebar for user inputs
+index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
+month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
+
+# Fetch and format price history data
+df_price_history = fetch_and_format_data(index_tickers[index_choice])
+
 # Dropbox direct download link
 dropbox_url = "https://www.dropbox.com/scl/fi/88utrb82zwzlbyo3ljkvl/HSI_SPX-Dashboard.xlsx?rlkey=jobmxd040dyhhs07k9gpmbq6j&dl=1"
 
@@ -49,28 +84,21 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
     except Exception as e:
         st.error(f"An error occurred: {e}")
         return None
+    
+# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places
+for column in ['Open', 'High', 'Low', 'Close']:
+    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x))
 
-# Main app setup
-st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
-st.title("HSI and SPX Statistical Analysis")
-
-# Sidebar for user inputs
-index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
-month_choice = st.sidebar.selectbox("Select Month for Prediction", ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
-monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_value=0.0, format="%.2f")
+# Display the formatted price history data
+with st.expander(f"View {index_choice} Price History", expanded=True):
+    st.dataframe(df_price_history[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
-price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # This line defines pred_sheet_name
 
-# Define the sheet names based on the index_choice
-price_sheet_name = 'HSI Raw' if index_choice == "HSI" else 'SP500 Raw'
-stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
-pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # Ensure this is correctly defined
-
 # Load the data
-df_price = load_data_from_dropbox(dropbox_url, sheet_name=price_sheet_name).copy()
+df_price = fetch_and_format_data(index_tickers[index_choice])
 df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14).copy()
 df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name).copy() # Ensure pred_sheet_name is defined before this line
 
@@ -90,22 +118,17 @@ desired_columns = [
 # Select only the desired columns
 df_stats = df_stats[desired_columns]
 
-# Process and format dataframes
-df_price['Date'] = pd.to_datetime(df_price['Date']).dt.strftime('%Y-%m-%d')
-df_price.sort_values(by='Date', ascending=False, inplace=True)
-#df_stats.drop(columns=["Average IR"], errors='ignore', inplace=True)
-
-# Function to perform linear regression and plot results with logarithmic transformation
+# Function to perform linear regression and plot results
 def plot_index_regression(df, index_name):
     n = len(df)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
-    y = np.log(df['Index Level']).values  # Logarithmic transformation of the index level
+    y = np.log(df['Close'].replace(',', '').astype(float)).values  # Logarithmic transformation of the Close price
 
     # Perform linear regression on the log-transformed data
     model = LinearRegression().fit(X, y)
     y_pred = model.predict(X)
 
-    # Calculate the standard error of the estimate on the log-transformed data
+    # Calculate the standard error of the estimate
     residuals = y - y_pred
     sse = np.sum(residuals ** 2)
     degrees_of_freedom = n - 2
@@ -115,64 +138,105 @@ def plot_index_regression(df, index_name):
     conf_levels = {
         1: "68.27%",
         2: "95.45%",
-        3: "99.73%",        
+        3: "99.73%",
     }
 
-# Plotting the results using Plotly
+    # Plotting the results using Plotly
     fig = go.Figure()
 
-    # Add actual data points (log-transformed) with hover text showing original price
-    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Index Level']), mode='lines', name=f'Actual {index_name} Level (Log)',
-                             line=dict(color='grey'),
-                             hovertemplate='%{text}', text=[f'{y:.1f}' for y in df['Index Level']]))
+    # Hover font size adjustment
+    hover_font_size = 14  # Base size for hover text, adjust as needed
 
-    # Add regression line in solid black on the log-transformed data
-    fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
-                             line=dict(color='black'),
-                             hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in y_pred]))
+    # Plot actual data points with log-transformed data
+    fig.add_trace(go.Scatter(
+        x=df['Date'], 
+        y=np.log(df['Close'].astype(float)),  # Keep the y-values log-transformed for the plot
+        mode='lines', 
+        name='Actual Close Price (Log)',
+        line=dict(color='grey'),
+        hovertemplate='%{text}<extra></extra>',  # Custom hover text
+        text=[f'Close: {y:,.0f}' for y in df['Close']],  # Display actual (non-log) Close price on hover
+        hoverlabel=dict(font=dict(size=hover_font_size))
+    ))
 
+    # Plot regression line
+    fig.add_trace(go.Scatter(
+        x=df['Date'], 
+        y=y_pred,  # y_pred is already in log scale
+        mode='lines', 
+        name='Regression Line (Log)',
+        line=dict(color='black'),
+        hovertemplate='%{text}<extra></extra>',
+        text=[f'Predicted: {np.exp(y):,.0f}' for y in y_pred],  # Convert predicted log values back to actual for hover
+        hoverlabel=dict(font=dict(size=hover_font_size))
+    ))
     # Define colors for the confidence lines
-    colors_above = ['lightblue', 'blue', 'darkblue']  # For lines above the regression
-    colors_below = ['orange', 'darkorange', 'red']  # For lines below the regression
+    colors_above = ['#00C9F9', '#004FF9', '#032979']  # For lines above the regression
+    colors_below = ['#BFB70F', '#DC810C', '#DC220C']  # For lines below the regression
 
-    # Add standard error lines with confidence levels and custom colors on the log-transformed data
+    # Plot standard error bands
     for n, conf_level in conf_levels.items():
-        line_width = 4 if n == 4 else 2  # Make the outermost line thicker
+        line_width = 5 if n == 4 else 2  # Make the outermost line thicker
+        # Calculate SE bands in log scale
         se_above = y_pred + n * standard_error
         se_below = y_pred - n * standard_error
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
-                                 name=f'+{n} SE (Log) ({conf_level})',
-                                 line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_above]))
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
-                                 name=f'-{n} SE (Log) ({conf_level})',
-                                 line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_below]))
 
-# Update plot layout with a custom height
-    fig.update_layout(title=f'{index_name} Linear Regression with Confidence Bands (Log Scale)',
-                      xaxis_title='Date',
-                      yaxis_title='Index Level',
-                      legend_title='Legend',
-                      yaxis_tickformat='.1f',  # Set tick format for y-axis
-                      height=800)  # Custom height for the chart
+        # Add SE band above regression line
+        fig.add_trace(go.Scatter(
+            x=df['Date'], y=se_above,
+            mode='lines', name=f'+{n} SE (Log) ({conf_level})',
+            line=dict(dash='dot', color=colors_above[n-1], width=line_width),
+            hovertemplate='%{text}<extra></extra>',
+            text=[f'Upper {n} SE: {np.exp(y):,.0f}' for y in se_above],  # Convert log SE values back to actual for hover
+            hoverlabel=dict(font=dict(size=hover_font_size))
+        ))
 
-    # Show the figure
-    #fig.show()
-    
-    # Return the figure
+        # Add SE band below regression line
+        fig.add_trace(go.Scatter(
+            x=df['Date'], y=se_below,
+            mode='lines', name=f'-{n} SE (Log) ({conf_level})',
+            line=dict(dash='dot', color=colors_below[n-1], width=line_width),
+            hovertemplate='%{text}<extra></extra>',
+            text=[f'Lower {n} SE: {np.exp(y):,.0f}' for y in se_below],  # Convert log SE values back to actual for hover
+            hoverlabel=dict(font=dict(size=hover_font_size))
+        ))
+
+    # Update plot layout with increased font size
+    fig.update_layout(
+        title={
+            'text': f'{index_name} Linear Regression with Confidence Bands (Log Scale)',
+            'y':0.9,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top',
+            'font': {'size': 19}  # Adjust title font size here
+        },
+        xaxis_title='Date',
+        yaxis_title='Log(Close Price)',
+        legend_title='Legend',
+        xaxis=dict(
+            titlefont=dict(size=15),  # Adjust x-axis title font size here
+            tickfont=dict(size=15),   # Adjust x-axis tick labels font size here
+        ),
+        yaxis=dict(
+            titlefont=dict(size=15),  # Adjust y-axis title font size here
+            tickfont=dict(size=15),   # Adjust y-axis tick labels font size here
+        ),
+        legend=dict(
+            font=dict(size=15)  # Adjust legend font size here
+        ),
+        yaxis_tickformat='.2f',  # Set tick format for y-axis
+        height=800  # Custom height for the chart
+    )
+
     return fig
-
 
 # Process and format the price history DataFrame
 df_price['Date'] = pd.to_datetime(df_price['Date']).dt.strftime('%Y-%m-%d')
 df_price = df_price.sort_values(by='Date', ascending=False)
 
-# Process and format the statistics DataFrame
-df_stats.drop(columns=["Average IR"], inplace=True, errors='ignore')
-
 # Apply specific formatting to designated columns
-decimal_columns = ['Index Level','Average Range (5 years)', 'Average Range', 'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 'Largest Rise', 'Largest Drop']  # Specify decimal columns
+decimal_columns = ['Average Range (5 years)', 'Average Range', 'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 'Largest Rise', 'Largest Drop']  # Specify decimal columns
 percentage_columns = ['Rise: Fall','Avg. Up Wick %','Avg Down Wick%','Body %']  # Specify percentage columns
 date_columns = ['Date of Largest Rise', 'Date of Largest Drop']  # Specify date columns
 
@@ -184,11 +248,6 @@ for col in df_stats.columns:
         df_stats[col] = df_stats[col].apply(format_percentage)
     elif col in date_columns:
         df_stats[col] = df_stats[col].apply(format_date_column)
-
-
-# Display the data in Streamlit for Price History
-with st.expander(f"View {index_choice} Price History", expanded=False):
-    st.dataframe(df_price)
 
 # Call the regression plot function and display it
 if index_choice == "HSI":
@@ -222,7 +281,6 @@ def add_monthly_open(value, monthly_open):
     if pd.isnull(value) or value == '' or isinstance(value, str):
         return value  # Return the original value if it's not numeric
     return value + monthly_open
-
 
 # If a matching month is found in the predictions, display the values
 if not month_row.empty:
