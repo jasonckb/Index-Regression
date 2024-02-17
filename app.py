@@ -79,14 +79,14 @@ if df_price is None or df_stats is None or df_pred is None:
     st.error("Failed to load data. Please check the Dropbox link and try again.")
     st.stop()
 
+# Define the columns you want to keep
 desired_columns = [
-    'Month', 'Average Range (5 years)', 'Average Range', 
-    'No. of Rise', 'Avg Rise', 'No of Fall', 'Avg Fall', 
+    'Month of Year', 'Average Range (5 years)', 'Average Range', 
+    'No. of Rise', 'Avg Rise', 'No. of Fall', 'Avg Fall', 
     'Largest Rise', 'Largest Drop', 'Date of Largest Rise', 
     'Time of the Drop', 'Rise: Fall', 'Avg. Up Wick %', 
     'Avg Down Wick%', 'Body %'
 ]
-
 # Select only the desired columns
 df_stats = df_stats[desired_columns]
 
