@@ -187,7 +187,7 @@ for col in df_stats.columns:
 
 for col in df_price.columns:
     if col in decimal_columns:        
-        df_stats[col] = df_price[col].apply(format_decimal)
+        df_price[col] = df_price[col].apply(format_decimal)
 
 # Display the data in Streamlit for Price History
 with st.expander(f"View {index_choice} Price History", expanded=False):
