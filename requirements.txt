@@ -1,5 +1,5 @@
 streamlit
-yfinance==0.1.63
+yfinance
 numpy
 pandas
 plotly
