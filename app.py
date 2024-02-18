@@ -148,28 +148,14 @@ def plot_index_regression(df, index_name):
     hover_font_size = 14  # Base size for hover text, adjust as needed
 
     # Plot actual data points with log-transformed data
-    fig.add_trace(go.Scatter(
-        x=df['Date'], 
-        y=np.log(df['Close'].astype(float)),  # Keep the y-values log-transformed for the plot
-        mode='lines', 
-        name='Actual Close Price (Log)',
-        line=dict(color='grey'),
-        hovertemplate='%{text}<extra></extra>',  # Custom hover text
-        text=[f'Close: {y:,.0f}' for y in df['Close']],  # Display actual (non-log) Close price on hover
-        hoverlabel=dict(font=dict(size=hover_font_size))
-    ))
+    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Index Level']), mode='lines', name=f'Actual {index_name} Level (Log)',
+                             line=dict(color='grey'),
+                             hovertemplate='%{text}', text=[f'{y:.1f}' for y in df['Index Level']]))
 
     # Plot regression line
-    fig.add_trace(go.Scatter(
-        x=df['Date'], 
-        y=y_pred,  # y_pred is already in log scale
-        mode='lines', 
-        name='Regression Line (Log)',
-        line=dict(color='black'),
-        hovertemplate='%{text}<extra></extra>',
-        text=[f'Predicted: {np.exp(y):,.0f}' for y in y_pred],  # Convert predicted log values back to actual for hover
-        hoverlabel=dict(font=dict(size=hover_font_size))
-    ))
+    fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
+                             line=dict(color='black'),
+                             hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in y_pred]))
     # Define colors for the confidence lines
     colors_above = ['#00C9F9', '#004FF9', '#032979']  # For lines above the regression
     colors_below = ['#BFB70F', '#DC810C', '#DC220C']  # For lines below the regression
@@ -182,25 +168,17 @@ def plot_index_regression(df, index_name):
         se_below = y_pred - n * standard_error
 
         # Add SE band above regression line
-        fig.add_trace(go.Scatter(
-            x=df['Date'], y=se_above,
-            mode='lines', name=f'+{n} SE (Log) ({conf_level})',
-            line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-            hovertemplate='%{text}<extra></extra>',
-            text=[f'Upper {n} SE: {np.exp(y):,.0f}' for y in se_above],  # Convert log SE values back to actual for hover
-            hoverlabel=dict(font=dict(size=hover_font_size))
-        ))
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
+                                 name=f'+{n} SE (Log) ({conf_level})',
+                                 line=dict(dash='dot', color=colors_above[n-1], width=line_width),
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_above]))
 
         # Add SE band below regression line
-        fig.add_trace(go.Scatter(
-            x=df['Date'], y=se_below,
-            mode='lines', name=f'-{n} SE (Log) ({conf_level})',
-            line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-            hovertemplate='%{text}<extra></extra>',
-            text=[f'Lower {n} SE: {np.exp(y):,.0f}' for y in se_below],  # Convert log SE values back to actual for hover
-            hoverlabel=dict(font=dict(size=hover_font_size))
-        ))
-
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
+                                 name=f'-{n} SE (Log) ({conf_level})',
+                                 line=dict(dash='dot', color=colors_below[n-1], width=line_width),
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_below]))
+        
     # Update plot layout with increased font size
     fig.update_layout(
         title={
