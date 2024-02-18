@@ -150,12 +150,12 @@ def plot_index_regression(df, index_name):
     # Plot actual data points with log-transformed data
     fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Close']), mode='lines', name=f'Actual {index_name} Level (Log)',
                              line=dict(color='grey'),
-                             hovertemplate='%{text}', text=[f'{y:.1f}' for y in df['Close']]))
+                             hovertemplate='%{text}', text=[f'{y:.2f}' for y in df['Close']]))
 
     # Plot regression line
     fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
                              line=dict(color='black'),
-                             hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in y_pred]))
+                             hovertemplate='%{text}', text=[f'{np.exp(y):.2f}' for y in y_pred]))
     # Define colors for the confidence lines
     colors_above = ['#00C9F9', '#004FF9', '#032979']  # For lines above the regression
     colors_below = ['#BFB70F', '#DC810C', '#DC220C']  # For lines below the regression
@@ -171,13 +171,13 @@ def plot_index_regression(df, index_name):
         fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
                                  name=f'+{n} SE (Log) ({conf_level})',
                                  line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_above]))
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.2f}' for y in se_above]))
 
         # Add SE band below regression line
         fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
                                  name=f'-{n} SE (Log) ({conf_level})',
                                  line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-                                 hovertemplate='%{text}', text=[f'{np.exp(y):.1f}' for y in se_below]))
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.2f}' for y in se_below]))
         
     # Update plot layout with increased font size
     fig.update_layout(
