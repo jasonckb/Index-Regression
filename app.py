@@ -148,9 +148,9 @@ def plot_index_regression(df, index_name):
     hover_font_size = 14  # Base size for hover text, adjust as needed
 
     # Plot actual data points with log-transformed data
-    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Index Level']), mode='lines', name=f'Actual {index_name} Level (Log)',
+    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Close']), mode='lines', name=f'Actual {index_name} Level (Log)',
                              line=dict(color='grey'),
-                             hovertemplate='%{text}', text=[f'{y:.1f}' for y in df['Index Level']]))
+                             hovertemplate='%{text}', text=[f'{y:.1f}' for y in df['Close']]))
 
     # Plot regression line
     fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
