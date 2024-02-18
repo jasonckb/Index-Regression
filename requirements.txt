@@ -2,7 +2,7 @@ streamlit
 yfinance
 numpy
 pandas
-plotly
+plotly==5.14.1
 openpyxl
 scikit-learn
 requests
