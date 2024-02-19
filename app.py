@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 import plotly.graph_objects as go
 import requests
 from io import BytesIO
@@ -128,6 +129,9 @@ def plot_index_regression(df, index_name):
     model = LinearRegression().fit(X, y)
     y_pred = model.predict(X)
 
+    # Calculate R2 score
+    r2 = model.score(X, y)  # Alternatively, you can use r2_score(y, y_pred)
+
     # Calculate the standard error of the estimate
     residuals = y - y_pred
     sse = np.sum(residuals ** 2)
@@ -186,7 +190,7 @@ def plot_index_regression(df, index_name):
     # Update plot layout with increased font size
     fig.update_layout(
         title={
-            'text': f'{index_name} Linear Regression with Confidence Bands (Log Scale)',
+            'text': f'{index_name} Linear Regression with Confidence Bands - Log Scale(R² = {r2:.2f})',
             'y':0.9,
             'x':0.5,
             'xanchor': 'center',
