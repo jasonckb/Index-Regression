@@ -313,6 +313,21 @@ def fetch_and_format_data(ticker):
     data.sort_values(by='Date', ascending=False, inplace=True)
     return data
 
+@st.cache(allow_output_mutation=True, show_spinner=True)
+def download_model(url):
+    """Downloads and loads a Keras model from a specified URL."""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # This will raise an HTTPError if the request returned an unsuccessful status code.
+        model_file = BytesIO(response.content)
+        model = load_model(model_file)
+        return model
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request error: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 def load_models(index_choice):
     model_names = ['GRU', 'LSTM', 'InceptionTime']
     models = {}
