@@ -313,6 +313,18 @@ ticker2 = 'DX-Y.NYB'#HSI: 'HKD=X'; NDX : 'DX-Y.NYB'
 ticker3 = '^VIX'#HSI:'CNY=X'; NDX : ^VIX
 tickers = [base_symbol, ticker2, ticker3]
 start_date = '2013-01-01'
+data = yf.download(tickers, start=start_date)
+close_prices = data['Close']
+
+# Check if you need to handle missing data
+close_prices = close_prices.dropna()
+
+close_prices.rename(columns={
+    base_symbol: f'{base_symbol}_Close',
+    ticker2: f'{ticker2}_Close',
+    ticker3: f'{ticker3}_Close',
+    # Add or adjust for any other columns you need, such as volume or other metrics
+}, inplace=True)
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
 def download_model(url):
@@ -357,7 +369,9 @@ def load_models(index_choice):
 
 
 # Assuming a function to preprocess and prepare data for prediction
-def preprocess_data(data, ticker1, base_symbol, ticker2, ticker3):
+def preprocess_data(close_prices, base_symbol, ticker2, ticker3):
+    # Handle NaN values more selectively (example: fill with the previous value)
+    close_prices.fillna(method='ffill', inplace=True)
     """
     Preprocesses the data by cleaning, feature weighting, and scaling.
 
@@ -373,7 +387,7 @@ def preprocess_data(data, ticker1, base_symbol, ticker2, ticker3):
     data_cleaned = data.dropna()
 
     # Calculate log returns for the Close prices of the base symbol
-    data_cleaned[f'{ticker1}_Log_Return'] = np.log(data_cleaned[f'{ticker1}_Close'] / data_cleaned[f'{ticker1}_Close'].shift(1))
+    data_cleaned[f'{base_symbol}_Log_Return'] = np.log(data_cleaned[f'{base_symbol}_Close'] / data_cleaned[f'{base_symbol}_Close'].shift(1))
 
     # Applying feature weighting
     weights = {
@@ -425,7 +439,7 @@ def plot_predictions(historical_data, forecasted_data):
     # Update layout
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
-    
+
 # Now we check if historical_data is defined and proceed with processing
 if historical_data is not None and not historical_data.empty:
     logging.info("Historical data is valid, proceeding with plotting...")
