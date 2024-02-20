@@ -301,17 +301,6 @@ logging.info("Starting to download and load models...")
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
 
-model_weights = {
-    "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
-    "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
-    "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
-}
-
-# Assuming the base_symbol, ticker2, and ticker3 are defined here, for example:
-base_symbol = index_choice  # This is already defined as per your snippet
-ticker2 = 'DX-Y.NYB'  # For demonstration, adjust as necessary
-ticker3 = '^VIX'  # For demonstration, adjust as necessary
-
 # Assuming a function to preprocess and prepare data for prediction
 def preprocess_data(data, base_symbol, ticker2, ticker3):
      # Handle NaN values by filling forward, then backward to cover all gaps
@@ -344,12 +333,6 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
     data_filled[numeric_columns] = scaler.fit_transform(data_filled[numeric_columns])
 
     return data_filled
-
-# Fetch and format the data (assuming fetch_and_format_data is already defined)
-df_price_history = fetch_and_format_data(index_tickers[base_symbol])
-
-# Preprocess the data
-preprocessed_data = preprocess_data(df_price_history, base_symbol, ticker2, ticker3)
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
 def download_model(url):
@@ -404,8 +387,20 @@ def predict_with_models(preprocessed_data, model_weights, models):
     weighted_prediction = np.sum(predictions, axis=0) / total_weight
     return weighted_prediction
 
-# Fetch and format historical data
-historical_data = fetch_and_format_data(index_tickers[index_choice])
+
+model_weights = {
+    "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
+    "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
+    "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
+}
+
+# Assuming the base_symbol, ticker2, and ticker3 are defined here, for example:
+base_symbol = index_choice  # This is already defined as per your snippet
+ticker2 = 'DX-Y.NYB'  # For demonstration, adjust as necessary
+ticker3 = '^VIX'  # For demonstration, adjust as necessary
+
+# Fetch and format the data (assuming fetch_and_format_data is already defined)
+#df_price_history = fetch_and_format_data(index_tickers[base_symbol])
 
 # Function to plot historical and forecasted prices
 def plot_predictions(historical_data, forecasted_data):
@@ -419,29 +414,37 @@ def plot_predictions(historical_data, forecasted_data):
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
 
-# Now we check if historical_data is defined and proceed with processing
-if historical_data is not None and not historical_data.empty:
-    logging.info("Historical data is valid, proceeding with plotting...")
-    try:
-        # Assuming preprocess_data, predict_with_models, and plot_predictions are defined
-        preprocessed_data = preprocess_data(historical_data)  # Ensure this matches your actual preprocessing logic
-        models = load_models(index_choice)  # Load models based on index choice
-        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
-        plot_predictions(historical_data, forecasted_data)
-    except Exception as e:
-        error_message = f"Error during data processing or plotting: {e}"
-        st.error(error_message)
-        logging.error(error_message)
-else:
-    st.error("Historical data is missing or invalid. Cannot proceed with plotting.")
-    logging.error("Historical data is missing or invalid.")
-
-
-# Trigger prediction and plotting
+# Main Workflow
 if st.sidebar.button("Execute Prediction"):
-    # Example of fetching and formatting data
-    ticker = "^HSI" if index_choice == "HSI" else "^GSPC"
-    historical_data = fetch_and_format_data(ticker)
+    logging.info("Fetching historical data...")
+    historical_data = fetch_and_format_data(index_tickers[index_choice])
+
+    if historical_data is not None and not historical_data.empty:
+        logging.info("Historical data is valid, proceeding with preprocessing...")
+        preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
+
+        logging.info("Loading models...")
+        models = load_models(index_choice)
+
+        logging.info("Generating predictions...")
+        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+
+        logging.info("Plotting results...")
+        plot_predictions(historical_data, forecasted_data)
+    else:
+        st.error("Historical data is missing or invalid.")
+        logging.error("Historical data is missing or invalid.")
+
+
+    
+
+
+
+
+
+
+
+
     
    
 
