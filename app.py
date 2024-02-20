@@ -10,6 +10,7 @@ from io import BytesIO
 import yfinance as yf
 from datetime import datetime
 import tensorflow as tf
+from keras.models import load_model
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
@@ -312,16 +313,28 @@ def fetch_and_format_data(ticker):
     data.sort_values(by='Date', ascending=False, inplace=True)
     return data
 
-# Load models based on index choice
 def load_models(index_choice):
     model_names = ['GRU', 'LSTM', 'InceptionTime']
     models = {}
-    for i, model_name in enumerate(model_names, start=1):
-        file_path = f"models/model{i}_{index_choice}.h5"
-        models[model_name] = tf.keras.models.load_model(file_path)
+    
+    # Define the base URL for your GitHub repository's raw content. Replace placeholders with actual values.
+    base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
+    
+    # Loop through the model names and construct the URL based on the index_choice and model name
+    for model_name in model_names:
+        model_filename = f"model1_{index_choice}.h5" if model_name == 'GRU' else f"model2_{index_choice}.h5" if model_name == 'LSTM' else f"model3_{index_choice}.h5"
+        model_url = f"{base_url}{model_filename}"
+        
+        # Download and load the model
+        print(f"Downloading {model_name} model for {index_choice}...")
+        model = download_model(model_url)
+        if model:
+            models[model_name] = model
+        else:
+            st.error(f"Failed to load {model_name} model for {index_choice}.")
+    
     return models
 
-models = load_models(index_choice)
 
 # Assuming a function to preprocess and prepare data for prediction
 # This function should be defined based on your preprocessing needs
@@ -356,6 +369,7 @@ if st.sidebar.button("Execute Prediction"):
     historical_data = fetch_and_format_data(ticker)
     
    
+
 
 
 
