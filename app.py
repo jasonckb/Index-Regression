@@ -297,7 +297,7 @@ else:
 
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
-index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
+
 model_weights = {
     "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
     "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
@@ -355,17 +355,7 @@ if st.sidebar.button("Execute Prediction"):
     ticker = "^HSI" if index_choice == "HSI" else "^GSPC"
     historical_data = fetch_and_format_data(ticker)
     
-    # Example of preprocessing data
-    # preprocessed_data = preprocess_and_prepare_data(historical_data)
-    # This is a placeholder, replace it with your preprocessing logic
-
-    # Example of predicting
-    # prediction = predict_with_models(preprocessed_data, model_weights, models)
-    # This is a placeholder, replace it with actual prediction logic using preprocessed data
-
-    # Example of plotting predictions
-    # plot_predictions(historical_data, prediction)
-    # This is a placeholder, ensure to pass actual historical data and prediction results to the plotting function
+   
 
 
 
