@@ -294,9 +294,6 @@ else:
 
 # Deep learning Model and Data Processing and Plotting session
 
-# Main app setup
-st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
-st.title("HSI and SPX Statistical Analysis by Jason Chan")
 
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
