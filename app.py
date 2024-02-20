@@ -413,6 +413,8 @@ def preprocess_data(close_prices, base_symbol, ticker2, ticker3):
 
     return data_scaled
 # This function should be defined based on your preprocessing needs
+preprocessed_data = preprocess_data(close_prices, base_symbol, ticker2, ticker3)
+
 
 # Function to predict with models and calculate weighted average of predictions
 def predict_with_models(preprocessed_data, model_weights, models):
