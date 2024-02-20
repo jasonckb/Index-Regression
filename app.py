@@ -306,20 +306,15 @@ model_weights = {
     "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
     "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
 }
+
+# Assuming the base_symbol, ticker2, and ticker3 are defined here, for example:
+base_symbol = index_choice  # This is already defined as per your snippet
+ticker2 = 'DX-Y.NYB'  # For demonstration, adjust as necessary
+ticker3 = '^VIX'  # For demonstration, adjust as necessary
+
 # Assuming a function to preprocess and prepare data for prediction
 def preprocess_data(data, base_symbol, ticker2, ticker3):
-    """
-    Preprocesses the data by cleaning, feature weighting, and scaling.
-
-    Parameters:
-    - data: DataFrame containing the historical data.
-    - base_symbol: The base ticker symbol for calculating log returns and other metrics.
-    - ticker2, ticker3: Additional symbols used for feature weighting.
-
-    Returns:
-    - DataFrame after preprocessing (cleaning, feature weighting, and scaling).
-    """
-    # Handle NaN values by filling forward, then backward to cover all gaps
+     # Handle NaN values by filling forward, then backward to cover all gaps
     data_filled = data.fillna(method='ffill').fillna(method='bfill')
 
     # Calculate log returns for the Close prices of the base symbol
@@ -349,11 +344,6 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
     data_filled[numeric_columns] = scaler.fit_transform(data_filled[numeric_columns])
 
     return data_filled
-
-# Define tickers and the data range
-base_symbol = index_choice
-ticker2 = 'DX-Y.NYB'  # Example: US Dollar Index
-ticker3 = '^VIX'  # Example: CBOE Volatility Index
 
 # Fetch and format the data (assuming fetch_and_format_data is already defined)
 df_price_history = fetch_and_format_data(index_tickers[base_symbol])
@@ -445,8 +435,6 @@ if historical_data is not None and not historical_data.empty:
 else:
     st.error("Historical data is missing or invalid. Cannot proceed with plotting.")
     logging.error("Historical data is missing or invalid.")
-
-
 
 
 # Trigger prediction and plotting
