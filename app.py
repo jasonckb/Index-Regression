@@ -306,25 +306,60 @@ model_weights = {
     "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
     "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
 }
+# Assuming a function to preprocess and prepare data for prediction
+def preprocess_data(data, base_symbol, ticker2, ticker3):
+    """
+    Preprocesses the data by cleaning, feature weighting, and scaling.
+
+    Parameters:
+    - data: DataFrame containing the historical data.
+    - base_symbol: The base ticker symbol for calculating log returns and other metrics.
+    - ticker2, ticker3: Additional symbols used for feature weighting.
+
+    Returns:
+    - DataFrame after preprocessing (cleaning, feature weighting, and scaling).
+    """
+    # Handle NaN values by filling forward, then backward to cover all gaps
+    data_filled = data.fillna(method='ffill').fillna(method='bfill')
+
+    # Calculate log returns for the Close prices of the base symbol
+    # Ensure there's a column named '{base_symbol}_Close' in your DataFrame
+    log_return_col_name = f'{base_symbol}_Log_Return'
+    close_col_name = f'{base_symbol}_Close'
+    if close_col_name in data_filled.columns:
+        data_filled[log_return_col_name] = np.log(data_filled[close_col_name] / data_filled[close_col_name].shift(1))
+    
+    # Applying feature weighting
+    weights = {
+        log_return_col_name: 1,
+        # Adjust these keys based on the actual columns in your DataFrame
+        f'{base_symbol}_Volume_Log': 0,
+        f'{base_symbol}_OBV_Log_Diff': 0,
+        f'{ticker2}_Log_Return': 0,
+        f'{ticker3}_Log_Return': 0
+    }
+
+    for col, weight in weights.items():
+        if col in data_filled.columns:
+            data_filled[col] *= weight
+
+    # Select only numeric columns for scaling
+    numeric_columns = data_filled.select_dtypes(include=['float64', 'int64']).columns
+    scaler = StandardScaler()
+    data_filled[numeric_columns] = scaler.fit_transform(data_filled[numeric_columns])
+
+    return data_filled
 
 # Define tickers and the data range
 base_symbol = index_choice
-ticker2 = 'DX-Y.NYB'#HSI: 'HKD=X'; NDX : 'DX-Y.NYB'
-ticker3 = '^VIX'#HSI:'CNY=X'; NDX : ^VIX
-tickers = [base_symbol, ticker2, ticker3]
-start_date = '2013-01-01'
-data = yf.download(tickers, start=start_date)
-close_prices = data['Close']
+ticker2 = 'DX-Y.NYB'  # Example: US Dollar Index
+ticker3 = '^VIX'  # Example: CBOE Volatility Index
 
-# Check if you need to handle missing data
-close_prices = close_prices.dropna()
+# Fetch and format the data (assuming fetch_and_format_data is already defined)
+df_price_history = fetch_and_format_data(index_tickers[base_symbol])
 
-close_prices.rename(columns={
-    base_symbol: f'{base_symbol}_Close',
-    ticker2: f'{ticker2}_Close',
-    ticker3: f'{ticker3}_Close',
-    # Add or adjust for any other columns you need, such as volume or other metrics
-}, inplace=True)
+# Preprocess the data
+preprocessed_data = preprocess_data(df_price_history, base_symbol, ticker2, ticker3)
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
 def download_model(url):
@@ -366,54 +401,6 @@ def load_models(index_choice):
             logging.error(error_message)
     
     return models
-
-
-# Assuming a function to preprocess and prepare data for prediction
-def preprocess_data(close_prices, base_symbol, ticker2, ticker3):
-    # Handle NaN values more selectively (example: fill with the previous value)
-    close_prices.fillna(method='ffill', inplace=True)
-    """
-    Preprocesses the data by cleaning, feature weighting, and scaling.
-
-    Parameters:
-    - data: DataFrame containing the historical data.
-    - ticker1: The base ticker symbol for calculating log returns.
-    - base_symbol, ticker2, ticker3: Symbols used for feature weighting.
-
-    Returns:
-    - DataFrame after preprocessing (cleaning, feature weighting, and scaling).
-    """
-    # Handle NaN values by removing rows
-    data_cleaned = data.dropna()
-
-    # Calculate log returns for the Close prices of the base symbol
-    data_cleaned[f'{base_symbol}_Log_Return'] = np.log(data_cleaned[f'{base_symbol}_Close'] / data_cleaned[f'{base_symbol}_Close'].shift(1))
-
-    # Applying feature weighting
-    weights = {
-        f'{base_symbol}_Log_Return': 1,
-        f'{base_symbol}_Volume_Log': 0,
-        f'{base_symbol}_OBV_Log_Diff': 0,
-        f'{ticker2}_Log_Return': 0,
-        f'{ticker3}_Log_Return': 0
-    }
-
-    data_weighted = data_cleaned.copy()
-    for col, weight in weights.items():
-        if col in data_weighted.columns:
-            data_weighted[col] = data_weighted[col] * weight
-
-    # Select only numeric columns for scaling
-    numeric_columns = data_weighted.select_dtypes(include=['float64', 'int64']).columns
-    data_scaled = data_weighted.copy()
-
-    # Use StandardScaler for Z-score normalization
-    scaler = StandardScaler()
-    data_scaled[numeric_columns] = scaler.fit_transform(data_weighted[numeric_columns])
-
-    return data_scaled
-# This function should be defined based on your preprocessing needs
-preprocessed_data = preprocess_data(close_prices, base_symbol, ticker2, ticker3)
 
 
 # Function to predict with models and calculate weighted average of predictions
