@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import StandardScaler
 import plotly.graph_objects as go
 import requests
 from io import BytesIO
 import yfinance as yf
+from datetime import datetime
+import tensorflow as tf
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
@@ -289,11 +292,83 @@ if not month_row.empty:
 else:
     st.sidebar.warning(f"No prediction data found for {month_choice}.")
 
+# Deep learning Model and Data Processing and Plotting session
 
+# Main app setup
+st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
+st.title("HSI and SPX Statistical Analysis by Jason Chan")
 
+# Sidebar inputs for deep learning prediction
+st.sidebar.subheader("Prediction by Deep Learning")
+index_choice = st.sidebar.selectbox("Select Market Index", ["HSI", "SPX"])
+model_weights = {
+    "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
+    "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
+    "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
+}
 
+# Function to fetch and format data from Yahoo Finance
+def fetch_and_format_data(ticker):
+    data = yf.download(ticker, start="1970-01-01")
+    data.reset_index(inplace=True)
+    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
+    data.sort_values(by='Date', ascending=False, inplace=True)
+    return data
 
+# Load models based on index choice
+def load_models(index_choice):
+    model_names = ['GRU', 'LSTM', 'InceptionTime']
+    models = {}
+    for i, model_name in enumerate(model_names, start=1):
+        file_path = f"models/model{i}_{index_choice}.h5"
+        models[model_name] = tf.keras.models.load_model(file_path)
+    return models
 
+models = load_models(index_choice)
+
+# Assuming a function to preprocess and prepare data for prediction
+# This function should be defined based on your preprocessing needs
+
+# Function to predict with models and calculate weighted average of predictions
+def predict_with_models(preprocessed_data, model_weights, models):
+    predictions = []
+    total_weight = sum(model_weights.values())
+    for model_name, model in models.items():
+        weight = model_weights[model_name]
+        prediction = model.predict(preprocessed_data)  # Ensure preprocessed_data is correctly shaped for the model
+        predictions.append(prediction * weight)
+    weighted_prediction = np.sum(predictions, axis=0) / total_weight
+    return weighted_prediction
+
+# Function to plot historical and forecasted prices
+def plot_predictions(historical_data, forecasted_data):
+    fig = go.Figure()
+    # Historical data plot
+    fig.add_trace(go.Scatter(x=historical_data['Date'], y=historical_data['Close'], mode='lines', name='Historical Close'))
+    # Forecasted data plot
+    forecast_dates = [historical_data['Date'].iloc[-1] + timedelta(days=i) for i in range(1, len(forecasted_data) + 1)]
+    fig.add_trace(go.Scatter(x=forecast_dates, y=forecasted_data, mode='lines+markers', name='Forecasted Close', line=dict(dash='dot')))
+    # Update layout
+    fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
+    st.plotly_chart(fig)
+
+# Trigger prediction and plotting
+if st.sidebar.button("Execute Prediction"):
+    # Example of fetching and formatting data
+    ticker = "^HSI" if index_choice == "HSI" else "^GSPC"
+    historical_data = fetch_and_format_data(ticker)
+    
+    # Example of preprocessing data
+    # preprocessed_data = preprocess_and_prepare_data(historical_data)
+    # This is a placeholder, replace it with your preprocessing logic
+
+    # Example of predicting
+    # prediction = predict_with_models(preprocessed_data, model_weights, models)
+    # This is a placeholder, replace it with actual prediction logic using preprocessed data
+
+    # Example of plotting predictions
+    # plot_predictions(historical_data, prediction)
+    # This is a placeholder, ensure to pass actual historical data and prediction results to the plotting function
 
 
 
