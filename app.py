@@ -11,6 +11,7 @@ import yfinance as yf
 from datetime import datetime
 import tensorflow as tf
 from keras.models import load_model
+import logging
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
@@ -294,7 +295,8 @@ else:
     st.sidebar.warning(f"No prediction data found for {month_choice}.")
 
 # Deep learning Model and Data Processing and Plotting session
-
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.info("Starting to download and load models...")
 
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
@@ -305,13 +307,12 @@ model_weights = {
     "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
 }
 
-# Function to fetch and format data from Yahoo Finance
-def fetch_and_format_data(ticker):
-    data = yf.download(ticker, start="1970-01-01")
-    data.reset_index(inplace=True)
-    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
-    data.sort_values(by='Date', ascending=False, inplace=True)
-    return data
+# Define tickers and the data range
+base_symbol = index_choice
+ticker2 = 'DX-Y.NYB'#HSI: 'HKD=X'; NDX : 'DX-Y.NYB'
+ticker3 = '^VIX'#HSI:'CNY=X'; NDX : ^VIX
+tickers = [base_symbol, ticker2, ticker3]
+start_date = '2013-01-01'
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
 def download_model(url):
@@ -328,30 +329,75 @@ def download_model(url):
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None
+    
 def load_models(index_choice):
     model_names = ['GRU', 'LSTM', 'InceptionTime']
     models = {}
-    
-    # Define the base URL for your GitHub repository's raw content. Replace placeholders with actual values.
+
+    # Define the base URL for your GitHub repository's raw content.
     base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
     
-    # Loop through the model names and construct the URL based on the index_choice and model name
     for model_name in model_names:
-        model_filename = f"model1_{index_choice}.h5" if model_name == 'GRU' else f"model2_{index_choice}.h5" if model_name == 'LSTM' else f"model3_{index_choice}.h5"
+        # Adjust the file naming pattern as necessary
+        model_filename = f"{model_name}_{index_choice}.h5"
         model_url = f"{base_url}{model_filename}"
         
-        # Download and load the model
         print(f"Downloading {model_name} model for {index_choice}...")
-        model = download_model(model_url)
-        if model:
+        model = download_model(model_url)  # Attempt to download and load the model
+        
+        if model:  # Check if the model is successfully loaded
             models[model_name] = model
+            logging.info(f"Successfully loaded {model_name} model for {index_choice}.")
         else:
-            st.error(f"Failed to load {model_name} model for {index_choice}.")
+            error_message = f"Failed to load {model_name} model for {index_choice}."
+            st.error(error_message)
+            logging.error(error_message)
     
     return models
 
 
 # Assuming a function to preprocess and prepare data for prediction
+def preprocess_data(data, ticker1, base_symbol, ticker2, ticker3):
+    """
+    Preprocesses the data by cleaning, feature weighting, and scaling.
+
+    Parameters:
+    - data: DataFrame containing the historical data.
+    - ticker1: The base ticker symbol for calculating log returns.
+    - base_symbol, ticker2, ticker3: Symbols used for feature weighting.
+
+    Returns:
+    - DataFrame after preprocessing (cleaning, feature weighting, and scaling).
+    """
+    # Handle NaN values by removing rows
+    data_cleaned = data.dropna()
+
+    # Calculate log returns for the Close prices of the base symbol
+    data_cleaned[f'{ticker1}_Log_Return'] = np.log(data_cleaned[f'{ticker1}_Close'] / data_cleaned[f'{ticker1}_Close'].shift(1))
+
+    # Applying feature weighting
+    weights = {
+        f'{base_symbol}_Log_Return': 1,
+        f'{base_symbol}_Volume_Log': 0,
+        f'{base_symbol}_OBV_Log_Diff': 0,
+        f'{ticker2}_Log_Return': 0,
+        f'{ticker3}_Log_Return': 0
+    }
+
+    data_weighted = data_cleaned.copy()
+    for col, weight in weights.items():
+        if col in data_weighted.columns:
+            data_weighted[col] = data_weighted[col] * weight
+
+    # Select only numeric columns for scaling
+    numeric_columns = data_weighted.select_dtypes(include=['float64', 'int64']).columns
+    data_scaled = data_weighted.copy()
+
+    # Use StandardScaler for Z-score normalization
+    scaler = StandardScaler()
+    data_scaled[numeric_columns] = scaler.fit_transform(data_weighted[numeric_columns])
+
+    return data_scaled
 # This function should be defined based on your preprocessing needs
 
 # Function to predict with models and calculate weighted average of predictions
@@ -365,6 +411,9 @@ def predict_with_models(preprocessed_data, model_weights, models):
     weighted_prediction = np.sum(predictions, axis=0) / total_weight
     return weighted_prediction
 
+# Fetch and format historical data
+historical_data = fetch_and_format_data(index_tickers[index_choice])
+
 # Function to plot historical and forecasted prices
 def plot_predictions(historical_data, forecasted_data):
     fig = go.Figure()
@@ -376,6 +425,26 @@ def plot_predictions(historical_data, forecasted_data):
     # Update layout
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
+    
+# Now we check if historical_data is defined and proceed with processing
+if historical_data is not None and not historical_data.empty:
+    logging.info("Historical data is valid, proceeding with plotting...")
+    try:
+        # Assuming preprocess_data, predict_with_models, and plot_predictions are defined
+        preprocessed_data = preprocess_data(historical_data)  # Ensure this matches your actual preprocessing logic
+        models = load_models(index_choice)  # Load models based on index choice
+        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+        plot_predictions(historical_data, forecasted_data)
+    except Exception as e:
+        error_message = f"Error during data processing or plotting: {e}"
+        st.error(error_message)
+        logging.error(error_message)
+else:
+    st.error("Historical data is missing or invalid. Cannot proceed with plotting.")
+    logging.error("Historical data is missing or invalid.")
+
+
+
 
 # Trigger prediction and plotting
 if st.sidebar.button("Execute Prediction"):
