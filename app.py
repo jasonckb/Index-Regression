@@ -335,17 +335,7 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
 
     return data_filled
 
-@st.cache(allow_output_mutation=True, show_spinner=True)
-# Adjust the download_model function to return an error message instead of calling st.error
-def download_model(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Check for HTTP errors
-        model_file = BytesIO(response.content)
-        model = load_model(model_file)
-        return model, None  # Return None for the error message if successful
-    except Exception as e:
-        return None, str(e)  # Return None for the model and the error message
+
 
 def load_models(index_choice):
     # Dictionary mapping model types to their respective filename prefixes
