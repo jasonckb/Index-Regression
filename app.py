@@ -335,7 +335,7 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
     return data_filled
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
-d# Adjust the download_model function to return an error message instead of calling st.error
+# Adjust the download_model function to return an error message instead of calling st.error
 def download_model(url):
     try:
         response = requests.get(url)
