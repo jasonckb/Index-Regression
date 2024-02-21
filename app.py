@@ -353,16 +353,23 @@ def download_model(url):
 def load_models(index_choice):
     model_names = ['GRU', 'LSTM', 'InceptionTime']
     models = {}
-
+    
     # Define the base URL for your GitHub repository's raw content.
     base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
     
+    # Map model names to their respective starting model numbers
+    model_filename_map = {
+        'GRU': 'model1',
+        'LSTM': 'model2',
+        'InceptionTime': 'model3'
+    }
+    
     for model_name in model_names:
-        # Adjust the file naming pattern as necessary
-        model_filename = f"{model_name}_{index_choice}.h5"
+        # Construct the model filename based on the naming convention
+        model_filename = f"{model_filename_map[model_name]}_{index_choice}.h5"
         model_url = f"{base_url}{model_filename}"
         
-        print(f"Downloading {model_name} model for {index_choice}...")
+        print(f"Attempting to download {model_name} model for {index_choice} from {model_url}...")
         model = download_model(model_url)  # Attempt to download and load the model
         
         if model:  # Check if the model is successfully loaded
@@ -374,6 +381,7 @@ def load_models(index_choice):
             logging.error(error_message)
     
     return models
+
 
 
 # Function to predict with models and calculate weighted average of predictions
