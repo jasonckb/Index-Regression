@@ -411,23 +411,25 @@ def load_models(index_choice):
         'InceptionTime': 'model3'
     }
     
+    def load_models(index_choice):
+    # Existing setup code...
+    
     for model_name in model_names:
-        # Construct the model filename based on the naming convention
         model_filename = f"{model_filename_map[model_name]}_{index_choice}.h5"
         model_url = f"{base_url}{model_filename}"
         
-        print(f"Attempting to download {model_name} model for {index_choice} from {model_url}...")
-        model = download_model(model_url)  # Attempt to download and load the model
+        print(f"Attempting to download {model_name} model from: {model_url}")  # Debugging output
+        model, error = download_model(model_url)
         
-        if model:  # Check if the model is successfully loaded
+        if model:
             models[model_name] = model
-            logging.info(f"Successfully loaded {model_name} model for {index_choice}.")
+            print(f"Successfully loaded {model_name} model.")  # Debugging output
         else:
-            error_message = f"Failed to load {model_name} model for {index_choice}."
-            st.error(error_message)
-            logging.error(error_message)
+            errors[model_name] = error
+            print(f"Failed to load {model_name} model: {error}")  # Debugging output
     
-    return models
+    return models, errors
+
 
 # Assuming load_models function is already defined and correctly implemented
 
