@@ -457,7 +457,7 @@ def plot_predictions(historical_data, forecasted_data):
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
 
-# Main Workflow
+# Main workflow
 if st.sidebar.button("Execute Prediction"):
     logging.info("Fetching historical data...")
     historical_data = fetch_and_format_data(index_tickers[index_choice])
@@ -465,54 +465,35 @@ if st.sidebar.button("Execute Prediction"):
     if historical_data is not None and not historical_data.empty:
         logging.info("Historical data is valid, proceeding with preprocessing...")
 
-        # Define your features here or ensure they are defined before this step
-        features = [
-            f'{base_symbol}_Log_Return',
-            f'{base_symbol}_Volume_Log',
-            f'{base_symbol}_OBV_Log_Diff',
-            f'{ticker2}_Log_Return',
-            f'{ticker3}_Log_Return'
-        ]
+        # Define features based on your model's needs
+        features = ['Close', 'Volume']  # Example features, adjust according to your model
 
-        # Assuming the base_symbol, ticker2, and ticker3 are somehow defined or selected
-        base_symbol = index_choice  # Update this as per your requirement
-        ticker2 = "ExampleTicker2"  # Placeholder
-        ticker3 = "ExampleTicker3"  # Placeholder
-        
-        # Ensure historical_data has the required columns/features before accessing them
-        if all(feature in historical_data for feature in features):
-            selected_data = historical_data[features].values.astype('float32')  # Convert to float32
+        # Preprocess the historical data (ensure this function exists and is implemented correctly)
+        preprocessed_data = preprocess_data(historical_data, features)
 
-            logging.info("Loading models...")
-            models, errors = load_models(index_choice)
+        logging.info("Loading models...")
+        # Load the models (ensure this function exists and is implemented correctly)
+        models, errors = load_models(index_choice)
 
-            # Check for errors in model loading and proceed if no errors
-            if not any(errors.values()):
-                logging.info("Generating predictions...")
+        if not any(errors.values()):  # Proceed if there are no errors in loading models
+            logging.info("Generating predictions...")
 
-                # Additional data preparation steps if needed, e.g., reshaping
-                
-                # Generate predictions
-                forecasted_data = predict_with_models(selected_data, model_weights, models)
+            # Generate predictions (ensure this function exists and is implemented correctly)
+            forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
 
-                if forecasted_data is not None:
-                    logging.info("Plotting results...")
-                    # Plot the results
-                    plot_predictions(historical_data, forecasted_data)
-                else:
-                    st.error("No forecast data available to plot.")
+            if forecasted_data is not None:
+                logging.info("Plotting results...")
+                # Plot the results (ensure this function exists and is implemented correctly)
+                plot_predictions(historical_data, forecasted_data)
             else:
-                # Handle model loading errors
-                for model_name, error in errors.items():
-                    if error:
-                        st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
+                st.error("No forecast data available to plot.")
         else:
-            st.error("Historical data is missing required features.")
+            for model_name, error in errors.items():
+                if error:
+                    st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
     else:
         st.error("Historical data is missing or invalid.")
         logging.error("Historical data is missing or invalid.")
-
-
 
 
 
