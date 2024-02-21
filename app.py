@@ -429,33 +429,6 @@ def load_models(index_choice):
     return models, errors
 
 
-# Assuming load_models function is already defined and correctly implemented
-
-# Attempt to load the models
-models, errors = load_models(index_choice)
-
-# Check for and handle model loading errors
-for model_name, error in errors.items():
-    if error:  # If there's an error message, it means the model failed to load
-        st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
-    else:
-        st.success(f"Successfully loaded {model_name} model for {index_choice}.")
-
-# Continue with other operations only if necessary models are loaded successfully
-if not errors or all(error is None for error in errors.values()):
-    # Assuming historical_data and preprocessed_data are defined and prepared
-    if st.sidebar.button("Execute Prediction"):
-        logging.info("Generating predictions...")
-        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
-
-        if forecasted_data is not None:
-            logging.info("Plotting results...")
-            plot_predictions(historical_data, forecasted_data)
-        else:
-            st.error("Prediction failed. Please check the model and data processing.")
-else:
-    st.error("One or more models failed to load. Cannot proceed with predictions.")
-
 
 # Function to predict with models and calculate weighted average of predictions
 def predict_with_models(preprocessed_data, model_weights, models):
