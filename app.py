@@ -364,10 +364,10 @@ def fetch_and_format_data(index_choice, ticker2, ticker3, start_date='2010-01-01
     combined_data.dropna(inplace=True)
 
     return combined_data
-
+    
 # Ensure this part comes before you try to access historical_data
 if 'historical_data' not in locals():
-    historical_data = fetch_and_format_data(index_choice,ticker2,ticker3)
+    historical_data = fetch_and_format_data(index_choice, ticker2, ticker3, start_date='2010-01-01', end_date=None)
 selected_data = historical_data[features].values.astype('float32')  # Convert to float32
 
 # Function to create dataset matrix
