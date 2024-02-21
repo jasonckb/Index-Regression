@@ -460,53 +460,57 @@ def plot_predictions(historical_data, forecasted_data):
 # Main Workflow
 if st.sidebar.button("Execute Prediction"):
     logging.info("Fetching historical data...")
-    # Placeholder for index_choice and index_tickers definition
-    index_choice = st.sidebar.selectbox("Select Index", ["HSI", "SPX"])
-    index_tickers = {"HSI": "^HSI", "SPX": "^GSPC"}  # Example mapping
-    
     historical_data = fetch_and_format_data(index_tickers[index_choice])
 
     if historical_data is not None and not historical_data.empty:
         logging.info("Historical data is valid, proceeding with preprocessing...")
-        
+
+        # Define your features here or ensure they are defined before this step
+        features = [
+            f'{base_symbol}_Log_Return',
+            f'{base_symbol}_Volume_Log',
+            f'{base_symbol}_OBV_Log_Diff',
+            f'{ticker2}_Log_Return',
+            f'{ticker3}_Log_Return'
+        ]
+
         # Assuming the base_symbol, ticker2, and ticker3 are somehow defined or selected
-        base_symbol = index_choice
+        base_symbol = index_choice  # Update this as per your requirement
         ticker2 = "ExampleTicker2"  # Placeholder
         ticker3 = "ExampleTicker3"  # Placeholder
         
-        # Preprocess the historical data
-        preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
+        # Ensure historical_data has the required columns/features before accessing them
+        if all(feature in historical_data for feature in features):
+            selected_data = historical_data[features].values.astype('float32')  # Convert to float32
 
-        logging.info("Loading models...")
-        models, errors = load_models(index_choice)
+            logging.info("Loading models...")
+            models, errors = load_models(index_choice)
 
-        # Check for errors in model loading
-        if not any(errors.values()):
-            logging.info("Generating predictions...")
-            
-            # Select the latest data for prediction, reshape as needed
-            # Here, you should adjust the data selection based on your model's expected input shape
-            latest_data = preprocessed_data[-1].reshape(1, -1, len(features))  # Example reshaping
-            
-            # Generate predictions
-            forecasted_data = predict_with_models(latest_data, model_weights, models)
+            # Check for errors in model loading and proceed if no errors
+            if not any(errors.values()):
+                logging.info("Generating predictions...")
 
-            if forecasted_data is not None:
-                logging.info("Plotting results...")
-                # Plot the results
-                plot_predictions(historical_data, forecasted_data)
+                # Additional data preparation steps if needed, e.g., reshaping
+                
+                # Generate predictions
+                forecasted_data = predict_with_models(selected_data, model_weights, models)
+
+                if forecasted_data is not None:
+                    logging.info("Plotting results...")
+                    # Plot the results
+                    plot_predictions(historical_data, forecasted_data)
+                else:
+                    st.error("No forecast data available to plot.")
             else:
-                st.error("No forecast data available to plot.")
+                # Handle model loading errors
+                for model_name, error in errors.items():
+                    if error:
+                        st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
         else:
-            # Handle model loading errors
-            for model_name, error in errors.items():
-                if error:
-                    st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
+            st.error("Historical data is missing required features.")
     else:
         st.error("Historical data is missing or invalid.")
         logging.error("Historical data is missing or invalid.")
-
-
 
 
 
