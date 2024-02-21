@@ -335,20 +335,39 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
     return data_filled
 
 @st.cache(allow_output_mutation=True, show_spinner=True)
+d# Adjust the download_model function to return an error message instead of calling st.error
 def download_model(url):
-    """Downloads and loads a Keras model from a specified URL."""
     try:
         response = requests.get(url)
-        response.raise_for_status()  # This will raise an HTTPError if the request returned an unsuccessful status code.
+        response.raise_for_status()  # Check for HTTP errors
         model_file = BytesIO(response.content)
         model = load_model(model_file)
-        return model
-    except requests.exceptions.RequestException as e:
-        st.error(f"Request error: {e}")
-        return None
+        return model, None  # Return None for the error message if successful
     except Exception as e:
-        st.error(f"Error loading model: {e}")
-        return None
+        return None, str(e)  # Return None for the model and the error message
+
+def load_models(index_choice):
+    model_names = ['GRU', 'LSTM', 'InceptionTime']
+    models = {}
+    errors = {}
+
+    for model_name in model_names:
+        model_filename = f"{model_name}_{index_choice}.h5"
+        model_url = f"https://raw.githubusercontent.com/jasonckb/Index-Regression/main/{model_filename}"
+        
+        model, error = download_model(model_url)
+        if model:
+            models[model_name] = model
+        else:
+            errors[model_name] = error  # Store the error message
+    
+    return models, errors  # Return both models and any errors
+
+# Usage example
+models, errors = load_models(index_choice)
+for model_name, error in errors.items():
+    st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
+
     
 def load_models(index_choice):
     model_names = ['GRU', 'LSTM', 'InceptionTime']
