@@ -435,19 +435,22 @@ def load_models(index_choice):
 def predict_with_models(preprocessed_data, model_weights, models):
     predictions = []
     total_weight = sum(model_weights.values())
+    
     for model_name, model in models.items():
-        weight = model_weights[model_name]
-        prediction = model.predict(preprocessed_data)  # Ensure preprocessed_data is correctly shaped for the model
-        predictions.append(prediction * weight)
-    weighted_prediction = np.sum(predictions, axis=0) / total_weight
-    return weighted_prediction
+        if model is not None:  # Check if the model was loaded successfully
+            weight = model_weights.get(model_name, 0)
+            prediction = model.predict(preprocessed_data)  # Ensure preprocessed_data is correctly shaped
+            weighted_prediction = prediction * weight
+            predictions.append(weighted_prediction)
+        else:
+            print(f"Model {model_name} was not loaded successfully.")
+    
+    if predictions:
+        aggregated_predictions = sum(predictions) / total_weight
+        return aggregated_predictions
+    else:
+        return None  # or appropriate error handling
 
-
-model_weights = {
-    "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
-    "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
-    "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
-}
 
 # Assuming the base_symbol, ticker2, and ticker3 are defined here, for example:
 base_symbol = index_choice  # This is already defined as per your snippet
