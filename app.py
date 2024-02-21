@@ -301,6 +301,11 @@ logging.info("Starting to download and load models...")
 
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
+model_weights = {
+    "GRU": st.sidebar.number_input("Weight for GRU", value=2, min_value=0),
+    "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
+    "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
+}
 
 # Assuming a function to preprocess and prepare data for prediction
 def preprocess_data(data, base_symbol, ticker2, ticker3):
