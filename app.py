@@ -12,6 +12,7 @@ from datetime import datetime
 import tensorflow as tf
 from keras.models import load_model
 import logging
+import tempfile  
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
