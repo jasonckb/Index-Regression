@@ -310,7 +310,7 @@ model_weights = {
 base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
 
 # Function to download and load a model
-@st.cache(allow_output_mutation=True, show_spinner=True)
+@st.cache_data(show_spinner=True)
 def download_model(url):
     try:
         response = requests.get(url)
@@ -424,27 +424,41 @@ def plot_predictions(historical_data, forecasted_data):
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
 
-# Main workflow
+# Main Workflow
 if st.sidebar.button("Execute Prediction"):
-    # Example: Define index_choice based on some user input or fixed value
-    index_choice = "HSI"  # Placeholder value
+    logging.info("Fetching historical data...")
+    # Example placeholder for fetching historical data, replace with actual data fetching logic
+    historical_data = fetch_and_format_data(index_tickers[index_choice])
 
-    # Load models
-    models, errors = load_models(index_choice)
-    for model_name, error in errors.items():
-        if error:
-            st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
+    if historical_data is not None and not historical_data.empty:
+        logging.info("Historical data is valid, proceeding with preprocessing...")
+        # Preprocess the historical data
+        preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
 
-    # Assuming historical_data is fetched and preprocessed_data is prepared
-    # preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
-    
-    # Proceed with prediction and plotting if there are no errors
-    if not errors:
-        # forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
-        # plot_predictions(historical_data, forecasted_data)
-        pass
+        logging.info("Loading models...")
+        # Load the models
+        models, errors = load_models(index_choice)
+
+        # Check for errors in model loading and proceed if no errors
+        if all(error is None for error in errors.values()):
+            logging.info("Generating predictions...")
+            # Generate predictions
+            forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+
+            if forecasted_data is not None:
+                logging.info("Plotting results...")
+                # Plot the results
+                plot_predictions(historical_data, forecasted_data)
+            else:
+                st.error("No forecast data available to plot.")
+        else:
+            # Handle model loading errors
+            for model_name, error in errors.items():
+                if error:
+                    st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
     else:
-        st.error("One or more models could not be loaded. Check logs for details.")
+        st.error("Historical data is missing or invalid.")
+        logging.error("Historical data is missing or invalid.")
 
 
 
