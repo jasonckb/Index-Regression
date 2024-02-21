@@ -377,12 +377,10 @@ def download_model(url):
         response.raise_for_status()  # Ensure the request was successful
         
         # Save the downloaded content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.h5') as tmp_file:
+        with tempfile.NamedTemporaryFile(delete=True, suffix='.h5') as tmp_file:
             tmp_file.write(response.content)
-            tmp_file_path = tmp_file.name
-            
-        # Load the model from the temporary file
-        model = load_model(tmp_file_path)
+            tmp_file.flush()  # Ensure all data is written to disk
+            model = load_model(tmp_file.name)  # Load the model from the temporary file's path
         return model, None  # Return the model and None for the error
     except Exception as e:
         return None, str(e)  # Return None for the model and the error message as a string
