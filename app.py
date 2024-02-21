@@ -429,27 +429,62 @@ def load_models(index_choice):
     
     return models
 
+# Assuming load_models function is already defined and correctly implemented
+
+# Attempt to load the models
+models, errors = load_models(index_choice)
+
+# Check for and handle model loading errors
+for model_name, error in errors.items():
+    if error:  # If there's an error message, it means the model failed to load
+        st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
+    else:
+        st.success(f"Successfully loaded {model_name} model for {index_choice}.")
+
+# Continue with other operations only if necessary models are loaded successfully
+if not errors or all(error is None for error in errors.values()):
+    # Assuming historical_data and preprocessed_data are defined and prepared
+    if st.sidebar.button("Execute Prediction"):
+        logging.info("Generating predictions...")
+        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+
+        if forecasted_data is not None:
+            logging.info("Plotting results...")
+            plot_predictions(historical_data, forecasted_data)
+        else:
+            st.error("Prediction failed. Please check the model and data processing.")
+else:
+    st.error("One or more models failed to load. Cannot proceed with predictions.")
 
 
 # Function to predict with models and calculate weighted average of predictions
 def predict_with_models(preprocessed_data, model_weights, models):
     predictions = []
     total_weight = sum(model_weights.values())
-    
+
     for model_name, model in models.items():
-        if model is not None:  # Check if the model was loaded successfully
-            weight = model_weights.get(model_name, 0)
-            prediction = model.predict(preprocessed_data)  # Ensure preprocessed_data is correctly shaped
+        if model is None:
+            st.write(f"Skipping predictions for {model_name} due to load failure.")
+            continue  # Skip this model
+
+        # Ensure preprocessed_data is correctly shaped for the model
+        # This step depends on your specific model architecture
+        prepared_data = preprocessed_data  # Modify as needed
+
+        try:
+            prediction = model.predict(prepared_data)
+            weight = model_weights[model_name]
             weighted_prediction = prediction * weight
             predictions.append(weighted_prediction)
-        else:
-            print(f"Model {model_name} was not loaded successfully.")
-    
+        except Exception as e:
+            st.error(f"Error during prediction with {model_name}: {str(e)}")
+
     if predictions:
         aggregated_predictions = sum(predictions) / total_weight
         return aggregated_predictions
     else:
         return None  # or appropriate error handling
+
 
 
 # Assuming the base_symbol, ticker2, and ticker3 are defined here, for example:
@@ -494,7 +529,8 @@ if st.sidebar.button("Execute Prediction"):
         logging.error("Historical data is missing or invalid.")
 
 
-    
+
+
 
 
 
