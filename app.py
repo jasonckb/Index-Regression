@@ -347,21 +347,49 @@ def download_model(url):
         return None, str(e)  # Return None for the model and the error message
 
 def load_models(index_choice):
-    model_names = ['GRU', 'LSTM', 'InceptionTime']
+    # Dictionary mapping model types to their respective filename prefixes
+    model_file_prefixes = {
+        'GRU': 'model1',
+        'LSTM': 'model2',
+        'InceptionTime': 'model3'
+    }
+    
     models = {}
     errors = {}
 
-    for model_name in model_names:
-        model_filename = f"{model_name}_{index_choice}.h5"
-        model_url = f"https://raw.githubusercontent.com/jasonckb/Index-Regression/main/{model_filename}"
-        
+    # Base URL pointing to the raw content in your GitHub repository
+    base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
+    
+    for model_type, prefix in model_file_prefixes.items():
+        # Constructing the filename using the prefix and index_choice
+        model_filename = f"{prefix}_{index_choice}.h5"
+        model_url = f"{base_url}{model_filename}"
+
+        # Attempting to download the model
         model, error = download_model(model_url)
         if model:
-            models[model_name] = model
+            # If model is successfully loaded, add it to the models dictionary
+            models[model_type] = model
+            print(f"Successfully loaded {model_type} model for {index_choice}.")
         else:
-            errors[model_name] = error  # Store the error message
-    
-    return models, errors  # Return both models and any errors
+            # If there was an error, add the error message to the errors dictionary
+            errors[model_type] = error
+            print(f"Failed to load {model_type} model for {index_choice}: {error}")
+
+    return models, errors
+
+# Make sure to define the download_model function properly
+@st.cache(allow_output_mutation=True, show_spinner=True)
+def download_model(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Check for HTTP errors
+        model_file = BytesIO(response.content)
+        model = load_model(model_file)
+        return model, None  # Return None for the error message if successful
+    except Exception as e:
+        return None, str(e)  # Return None for the model and the error message
+
 
 # Usage example
 models, errors = load_models(index_choice)
