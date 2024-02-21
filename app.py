@@ -324,6 +324,49 @@ features = [
     f'{ticker2}_Log_Return',
     f'{ticker3}_Log_Return'
 ]
+
+def fetch_and_format_data(index_choice, ticker2, ticker3, start_date='2010-01-01', end_date=None):
+    """
+    Fetch historical data for the given tickers and merge them into a single DataFrame.
+
+    Parameters:
+    - index_choice: Ticker symbol for the primary index.
+    - ticker2: Ticker symbol for the secondary asset.
+    - ticker3: Ticker symbol for the tertiary asset.
+    - start_date: Start date for the historical data (default is '2010-01-01').
+    - end_date: End date for the historical data (default is None, which fetches the most recent data).
+
+    Returns:
+    - DataFrame with historical data for the specified tickers.
+    """
+    # Fetch data for each ticker
+    index_data = yf.download(index_choice, start=start_date, end=end_date)
+    ticker2_data = yf.download(ticker2, start=start_date, end=end_date)
+    ticker3_data = yf.download(ticker3, start=start_date, end=end_date)
+
+    # Rename 'Close' column to distinguish between different assets
+    index_data.rename(columns={'Close': f'{index_choice}_Close'}, inplace=True)
+    ticker2_data.rename(columns={'Close': f'{ticker2}_Close'}, inplace=True)
+    ticker3_data.rename(columns={'Close': f'{ticker3}_Close'}, inplace=True)
+
+    # Combine data into a single DataFrame
+    combined_data = pd.DataFrame(index=index_data.index)
+    combined_data[f'{index_choice}_Close'] = index_data[f'{index_choice}_Close']
+    combined_data[f'{ticker2}_Close'] = ticker2_data[f'{ticker2}_Close']
+    combined_data[f'{ticker3}_Close'] = ticker3_data[f'{ticker3}_Close']
+
+    # Optional: Calculate additional features, e.g., log returns
+    combined_data[f'{index_choice}_Log_Return'] = np.log(combined_data[f'{index_choice}_Close'] / combined_data[f'{index_choice}_Close'].shift(1))
+    combined_data[f'{ticker2}_Log_Return'] = np.log(combined_data[f'{ticker2}_Close'] / combined_data[f'{ticker2}_Close'].shift(1))
+    combined_data[f'{ticker3}_Log_Return'] = np.log(combined_data[f'{ticker3}_Close'] / combined_data[f'{ticker3}_Close'].shift(1))
+
+    # Drop NaN values that might have been introduced by the log return calculation
+    combined_data.dropna(inplace=True)
+
+    return combined_data
+# Ensure this part comes before you try to access historical_data
+if 'historical_data' not in locals():
+    historical_data = fetch_and_format_data(index_tickers[index_choice])
 selected_data = historical_data[features].values.astype('float32')  # Convert to float32
 
 # Function to create dataset matrix
@@ -462,34 +505,32 @@ def plot_predictions(historical_data, forecasted_data):
 # Main workflow
 if st.sidebar.button("Execute Prediction"):
     logging.info("Fetching historical data...")
-    historical_data = fetch_and_format_data(index_tickers[index_choice])
+    historical_data = fetch_and_format_data(index_choice, 'DX-Y.NYB', '^VIX', start_date='2013-01-01')
 
     if historical_data is not None and not historical_data.empty:
         logging.info("Historical data is valid, proceeding with preprocessing...")
 
-        # Define features based on your model's needs
-        features = ['Close', 'Volume']  # Example features, adjust according to your model
-
-        # Preprocess the historical data (ensure this function exists and is implemented correctly)
-        preprocessed_data = preprocess_data(historical_data, features)
+        # Preprocess the historical data
+        preprocessed_data = preprocess_data(historical_data, index_choice, 'DX-Y.NYB', '^VIX')
 
         logging.info("Loading models...")
-        # Load the models (ensure this function exists and is implemented correctly)
+        # Load the models
         models, errors = load_models(index_choice)
 
         if not any(errors.values()):  # Proceed if there are no errors in loading models
             logging.info("Generating predictions...")
 
-            # Generate predictions (ensure this function exists and is implemented correctly)
+            # Generate predictions
             forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
 
             if forecasted_data is not None:
                 logging.info("Plotting results...")
-                # Plot the results (ensure this function exists and is implemented correctly)
+                # Plot the results
                 plot_predictions(historical_data, forecasted_data)
             else:
                 st.error("No forecast data available to plot.")
         else:
+            # Handle model loading errors
             for model_name, error in errors.items():
                 if error:
                     st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
