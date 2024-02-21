@@ -297,7 +297,6 @@ else:
 
 # Deep learning Model and Data Processing and Plotting session
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.info("Starting to download and load models...")
 
 # Sidebar inputs for deep learning prediction
 st.sidebar.subheader("Prediction by Deep Learning")
@@ -306,6 +305,40 @@ model_weights = {
     "LSTM": st.sidebar.number_input("Weight for LSTM", value=1, min_value=0),
     "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
 }
+
+# Define the base URL for your GitHub repository's raw content
+base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
+
+# Function to download and load a model
+@st.cache(allow_output_mutation=True, show_spinner=True)
+def download_model(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        with tempfile.NamedTemporaryFile(delete=True, suffix='.h5') as tmp_file:
+            tmp_file.write(response.content)
+            tmp_file.flush()
+            model = load_model(tmp_file.name)
+        return model, None
+    except Exception as e:
+        return None, str(e)
+    
+# Function to load models based on index_choice
+def load_models(index_choice):
+    models = {}
+    errors = {}
+    model_file_prefixes = {'GRU': 'model1', 'LSTM': 'model2', 'InceptionTime': 'model3'}
+
+    for model_type, prefix in model_file_prefixes.items():
+        model_filename = f"{prefix}_{index_choice}.h5"
+        model_url = f"{base_url}{model_filename}"
+        model, error = download_model(model_url)
+        if model:
+            models[model_type] = model
+        else:
+            errors[model_type] = error
+
+    return models, errors
 
 # Assuming a function to preprocess and prepare data for prediction
 def preprocess_data(data, base_symbol, ticker2, ticker3):
@@ -339,95 +372,6 @@ def preprocess_data(data, base_symbol, ticker2, ticker3):
     data_filled[numeric_columns] = scaler.fit_transform(data_filled[numeric_columns])
 
     return data_filled
-
-
-
-def load_models(index_choice):
-    # Dictionary mapping model types to their respective filename prefixes
-    model_file_prefixes = {
-        'GRU': 'model1',
-        'LSTM': 'model2',
-        'InceptionTime': 'model3'
-    }
-    
-    models = {}
-    errors = {}
-
-    # Base URL pointing to the raw content in your GitHub repository
-    base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
-    
-    for model_type, prefix in model_file_prefixes.items():
-        # Constructing the filename using the prefix and index_choice
-        model_filename = f"{prefix}_{index_choice}.h5"
-        model_url = f"{base_url}{model_filename}"
-
-        # Attempting to download the model
-        model, error = download_model(model_url)
-        if model:
-            # If model is successfully loaded, add it to the models dictionary
-            models[model_type] = model
-            print(f"Successfully loaded {model_type} model for {index_choice}.")
-        else:
-            # If there was an error, add the error message to the errors dictionary
-            errors[model_type] = error
-            print(f"Failed to load {model_type} model for {index_choice}: {error}")
-
-    return models, errors
-
-# Make sure to define the download_model function properly
-@st.cache(allow_output_mutation=True, show_spinner=True)
-def download_model(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Ensure the request was successful
-        
-        # Save the downloaded content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.h5') as tmp_file:
-            tmp_file.write(response.content)
-            tmp_file.flush()  # Ensure all data is written to disk
-            model = load_model(tmp_file.name)  # Load the model from the temporary file's path
-        return model, None  # Return the model and None for the error
-    except Exception as e:
-        return None, str(e)  # Return None for the model and the error message as a string
-
-
-# Usage example
-models, errors = load_models(index_choice)
-for model_name, error in errors.items():
-    st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
-
-    
-def load_models(index_choice):
-    model_names = ['GRU', 'LSTM', 'InceptionTime']
-    models = {}
-    
-    # Define the base URL for your GitHub repository's raw content.
-    base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
-    
-    # Map model names to their respective starting model numbers
-    model_filename_map = {
-        'GRU': 'model1',
-        'LSTM': 'model2',
-        'InceptionTime': 'model3'
-    }
-    
-     
-    for model_name in model_names:
-        model_filename = f"{model_filename_map[model_name]}_{index_choice}.h5"
-        model_url = f"{base_url}{model_filename}"
-        
-        print(f"Attempting to download {model_name} model from: {model_url}")  # Debugging output
-        model, error = download_model(model_url)
-        
-        if model:
-            models[model_name] = model
-            print(f"Successfully loaded {model_name} model.")  # Debugging output
-        else:
-            errors[model_name] = error
-            print(f"Failed to load {model_name} model: {error}")  # Debugging output
-    
-    return models, errors
-
 
 
 # Function to predict with models and calculate weighted average of predictions
@@ -480,26 +424,27 @@ def plot_predictions(historical_data, forecasted_data):
     fig.update_layout(title='Historical and Forecast Closing Prices', xaxis_title='Date', yaxis_title='Price', legend_title='Legend')
     st.plotly_chart(fig)
 
-# Main Workflow
+# Main workflow
 if st.sidebar.button("Execute Prediction"):
-    logging.info("Fetching historical data...")
-    historical_data = fetch_and_format_data(index_tickers[index_choice])
+    # Example: Define index_choice based on some user input or fixed value
+    index_choice = "HSI"  # Placeholder value
 
-    if historical_data is not None and not historical_data.empty:
-        logging.info("Historical data is valid, proceeding with preprocessing...")
-        preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
+    # Load models
+    models, errors = load_models(index_choice)
+    for model_name, error in errors.items():
+        if error:
+            st.error(f"Failed to load {model_name} model for {index_choice}: {error}")
 
-        logging.info("Loading models...")
-        models = load_models(index_choice)
-
-        logging.info("Generating predictions...")
-        forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
-
-        logging.info("Plotting results...")
-        plot_predictions(historical_data, forecasted_data)
+    # Assuming historical_data is fetched and preprocessed_data is prepared
+    # preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
+    
+    # Proceed with prediction and plotting if there are no errors
+    if not errors:
+        # forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+        # plot_predictions(historical_data, forecasted_data)
+        pass
     else:
-        st.error("Historical data is missing or invalid.")
-        logging.error("Historical data is missing or invalid.")
+        st.error("One or more models could not be loaded. Check logs for details.")
 
 
 
