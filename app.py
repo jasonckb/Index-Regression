@@ -411,9 +411,7 @@ def load_models(index_choice):
         'InceptionTime': 'model3'
     }
     
-    def load_models(index_choice):
-    # Existing setup code...
-    
+     
     for model_name in model_names:
         model_filename = f"{model_filename_map[model_name]}_{index_choice}.h5"
         model_url = f"{base_url}{model_filename}"
