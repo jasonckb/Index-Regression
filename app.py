@@ -295,6 +295,8 @@ if not month_row.empty:
 else:
     st.sidebar.warning(f"No prediction data found for {month_choice}.")
 
+# Deep Learning Predictions App
+    
 # Deep learning Model and Data Processing and Plotting session
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -494,21 +496,5 @@ if st.sidebar.button("Execute Prediction"):
     else:
         st.error("Historical data is missing or invalid.")
         logging.error("Historical data is missing or invalid.")
-
-
-
-
-
-
-
-
     
-   
-
-
-
-
-
-
-
 
