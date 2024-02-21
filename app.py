@@ -306,6 +306,39 @@ model_weights = {
     "InceptionTime": st.sidebar.number_input("Weight for InceptionTime", value=1, min_value=0)
 }
 
+# Define tickers and the data range
+base_symbol = index_choice
+ticker2 = 'DX-Y.NYB'#HSI: 'HKD=X'; NDX : 'DX-Y.NYB'
+ticker3 = '^VIX'#HSI:'CNY=X'; NDX : ^VIX
+
+# Select both 'Close' and 'Volume' columns
+features = [
+    f'{base_symbol}_Log_Return',
+    f'{base_symbol}_Volume_Log',
+    #f'{base_symbol}_RSI',
+    #f'{base_symbol}_TRIX',
+    f'{base_symbol}_OBV_Log_Diff',
+    #f'{base_symbol}_ADX',
+    f'{ticker2}_Log_Return',
+    f'{ticker3}_Log_Return'
+]
+selected_data = historical_data[features].values.astype('float32')  # Convert to float32
+
+# Function to create dataset matrix
+def create_dataset(dataset, look_back=20):
+    X, Y = [], []
+    for i in range(len(dataset) - look_back - 1):
+        a = dataset[i:(i + look_back), :]
+        X.append(a)
+        Y.append(dataset[i + look_back, 0])
+    return np.array(X), np.array(Y)
+
+# Define the time step or look_back
+time_step = n_days
+
+# Convert the dataset to arrays
+X, y = create_dataset(data_scaled[features].values, time_step)
+
 # Define the base URL for your GitHub repository's raw content
 base_url = "https://raw.githubusercontent.com/jasonckb/Index-Regression/main/"
 
@@ -427,23 +460,36 @@ def plot_predictions(historical_data, forecasted_data):
 # Main Workflow
 if st.sidebar.button("Execute Prediction"):
     logging.info("Fetching historical data...")
-    # Example placeholder for fetching historical data, replace with actual data fetching logic
+    # Placeholder for index_choice and index_tickers definition
+    index_choice = st.sidebar.selectbox("Select Index", ["HSI", "SPX"])
+    index_tickers = {"HSI": "^HSI", "SPX": "^GSPC"}  # Example mapping
+    
     historical_data = fetch_and_format_data(index_tickers[index_choice])
 
     if historical_data is not None and not historical_data.empty:
         logging.info("Historical data is valid, proceeding with preprocessing...")
+        
+        # Assuming the base_symbol, ticker2, and ticker3 are somehow defined or selected
+        base_symbol = index_choice
+        ticker2 = "ExampleTicker2"  # Placeholder
+        ticker3 = "ExampleTicker3"  # Placeholder
+        
         # Preprocess the historical data
         preprocessed_data = preprocess_data(historical_data, base_symbol, ticker2, ticker3)
 
         logging.info("Loading models...")
-        # Load the models
         models, errors = load_models(index_choice)
 
-        # Check for errors in model loading and proceed if no errors
-        if all(error is None for error in errors.values()):
+        # Check for errors in model loading
+        if not any(errors.values()):
             logging.info("Generating predictions...")
+            
+            # Select the latest data for prediction, reshape as needed
+            # Here, you should adjust the data selection based on your model's expected input shape
+            latest_data = preprocessed_data[-1].reshape(1, -1, len(features))  # Example reshaping
+            
             # Generate predictions
-            forecasted_data = predict_with_models(preprocessed_data, model_weights, models)
+            forecasted_data = predict_with_models(latest_data, model_weights, models)
 
             if forecasted_data is not None:
                 logging.info("Plotting results...")
