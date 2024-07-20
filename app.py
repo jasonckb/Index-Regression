@@ -2,17 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from sklearn.preprocessing import StandardScaler
 import plotly.graph_objects as go
 import requests
 from io import BytesIO
 import yfinance as yf
 from datetime import datetime
-import tensorflow as tf
-from keras.models import load_model
-import logging
-import tempfile  
 
 # Main app setup
 st.set_page_config(page_title="HSI and SPX Statistical Analysis", layout="wide")
