@@ -123,9 +123,18 @@ df_stats = df_stats[desired_columns]
 
 # Function to perform linear regression and plot results
 def plot_index_regression(df, index_name):
+    # Remove rows where Close column contains non-numeric values
+    df = df[~df['Close'].astype(str).str.contains('^HSI')]
+    
+    # Convert Close to numeric, removing any commas
+    df['Close'] = pd.to_numeric(df['Close'].astype(str).str.replace(',', ''), errors='coerce')
+    
+    # Drop any NaN values
+    df = df.dropna(subset=['Close'])
+    
     n = len(df)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
-    y = np.log(pd.to_numeric(df['Close'], errors='coerce')).values  # Logarithmic transformation of the Close price
+    y = np.log(df['Close']).values  # Logarithmic transformation of the Close price
 
     # Perform linear regression on the log-transformed data
     model = LinearRegression().fit(X, y)
@@ -154,9 +163,9 @@ def plot_index_regression(df, index_name):
     hover_font_size = 16  # Base size for hover text, adjust as needed
 
     # Plot actual data points with log-transformed data
-    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(pd.to_numeric(df['Close'], errors='coerce')), mode='lines', name=f'Actual {index_name} Level (Log)',
+    fig.add_trace(go.Scatter(x=df['Date'], y=y, mode='lines', name=f'Actual {index_name} Level (Log)',
                              line=dict(color='black'),
-                             hovertemplate='%{text}', text=[f'{y:.0f}' for y in pd.to_numeric(df['Close'], errors='coerce')],
+                             hovertemplate='%{text}', text=[f'{np.exp(val):.0f}' for val in y],
                              hoverlabel=dict(font=dict(size=hover_font_size))))
 
     # Plot regression line
