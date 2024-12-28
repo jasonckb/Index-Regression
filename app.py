@@ -50,6 +50,11 @@ def fetch_and_format_data(ticker):
     # Format the Date column
     data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
 
+    # Convert numeric columns to proper format
+    numeric_columns = ['Open', 'High', 'Low', 'Close']
+    for col in numeric_columns:
+        data[col] = pd.to_numeric(data[col], errors='coerce')
+
     # Sort data by Date in descending order to show the latest data first
     data.sort_values(by='Date', ascending=False, inplace=True)
 
@@ -88,13 +93,16 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error(f"An error occurred: {e}")
         return None
     
-# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places
+# Create a copy of the dataframe for display
+df_display = df_price_history.copy()
+
+# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places for display only
 for column in ['Open', 'High', 'Low', 'Close']:
-    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x) if isinstance(x, (int, float)) else x)
+    df_display[column] = df_display[column].apply(lambda x: format_decimal(x) if isinstance(x, (int, float)) else x)
 
 # Display the formatted price history data
 with st.expander(f"View {index_choice} Price History", expanded=True):
-    st.dataframe(df_price_history[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
+    st.dataframe(df_display[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
@@ -123,12 +131,6 @@ df_stats = df_stats[desired_columns]
 
 # Function to perform linear regression and plot results
 def plot_index_regression(df, index_name):
-    # Remove rows where Close column contains non-numeric values
-    df = df[~df['Close'].astype(str).str.contains('^HSI')]
-    
-    # Convert Close to numeric, removing any commas
-    df['Close'] = pd.to_numeric(df['Close'].astype(str).str.replace(',', ''), errors='coerce')
-    
     # Drop any NaN values
     df = df.dropna(subset=['Close'])
     
