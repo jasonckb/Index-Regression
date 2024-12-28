@@ -17,6 +17,8 @@ def format_decimal(value):
     if pd.isnull(value):
         return None
     try:
+        if isinstance(value, str):
+            value = float(value.replace(',', ''))  # Convert string to float if needed
         return f"{value:,.0f}"  # Format numbers >= 1 with commas and no decimal places
     except ValueError:
         return value  # If conversion fails, return the original value
@@ -88,7 +90,7 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
     
 # Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places
 for column in ['Open', 'High', 'Low', 'Close']:
-    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x))
+    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x) if isinstance(x, (int, float)) else x)
 
 # Display the formatted price history data
 with st.expander(f"View {index_choice} Price History", expanded=True):
@@ -288,6 +290,3 @@ if not month_row.empty:
             st.sidebar.text(f"{label}: Column not found")
 else:
     st.sidebar.warning(f"No prediction data found for {month_choice}.")
-
-
-
