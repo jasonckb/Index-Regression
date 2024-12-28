@@ -176,18 +176,18 @@ def plot_index_regression(df, index_name):
         se_below = y_pred - n * standard_error
 
         # Add SE band above regression line
-            fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
-                                    name=f'+{n} SE (Log) ({conf_level})',
-                                    line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-                                    hovertemplate='%{y:.0f}<extra></extra>',
-                                    hoverlabel=dict(font=dict(size=hover_font_size))))
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
+                                name=f'+{n} SE (Log) ({conf_level})',
+                                line=dict(dash='dot', color=colors_above[n-1], width=line_width),
+                                hovertemplate='%{y:.0f}<extra></extra>',
+                                hoverlabel=dict(font=dict(size=hover_font_size))))
 
-            # Add SE band below regression line
-            fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
-                                    name=f'-{n} SE (Log) ({conf_level})',
-                                    line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-                                    hovertemplate='%{y:.0f}<extra></extra>',
-                                    hoverlabel=dict(font=dict(size=hover_font_size))))
+        # Add SE band below regression line
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
+                                name=f'-{n} SE (Log) ({conf_level})',
+                                line=dict(dash='dot', color=colors_below[n-1], width=line_width),
+                                hovertemplate='%{y:.0f}<extra></extra>',
+                                hoverlabel=dict(font=dict(size=hover_font_size))))
         
     # Update plot layout with increased font size
     fig.update_layout(
