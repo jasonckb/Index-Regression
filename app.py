@@ -54,14 +54,19 @@ def fetch_and_format_data(ticker):
         # Format the Date column
         data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
         
+        # Sort data by Date in descending order
+        data.sort_values(by='Date', ascending=False, inplace=True)
+        
+        # Remove any rows where Close column contains '^HSI'
+        data = data[~data['Close'].astype(str).str.contains('^HSI', na=False)]
+        
         # Ensure numeric columns are float type
         numeric_columns = ['Open', 'High', 'Low', 'Close']
         for col in numeric_columns:
-            # Convert to float, removing any non-numeric characters
-            data[col] = data[col].astype(float)
-        
-        # Sort data by Date in descending order
-        data.sort_values(by='Date', ascending=False, inplace=True)
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+            
+        # Drop any rows with NaN values
+        data = data.dropna(subset=numeric_columns)
         
         return data
     except Exception as e:
