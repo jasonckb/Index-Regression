@@ -41,24 +41,32 @@ def format_date_column(date_val):
 
 # Function to fetch data from Yahoo Finance and format it
 def fetch_and_format_data(ticker):
-    # Fetch data
-    data = yf.download(ticker, start="1970-01-01")
-     
-    # Ensure date is the index, then reset it to make it a column
-    data.reset_index(inplace=True)
-
-    # Format the Date column
-    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
-
-    # Convert numeric columns to proper format
-    numeric_columns = ['Open', 'High', 'Low', 'Close']
-    for col in numeric_columns:
-        data[col] = pd.to_numeric(data[col], errors='coerce')
-
-    # Sort data by Date in descending order to show the latest data first
-    data.sort_values(by='Date', ascending=False, inplace=True)
-
-    return data
+    try:
+        # Fetch data with error handling
+        data = yf.download(ticker, start="1970-01-01")
+        if data.empty:
+            st.error(f"No data received for {ticker}")
+            return None
+        
+        # Reset index to make Date a column
+        data.reset_index(inplace=True)
+        
+        # Format the Date column
+        data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
+        
+        # Ensure numeric columns are float type
+        numeric_columns = ['Open', 'High', 'Low', 'Close']
+        for col in numeric_columns:
+            # Convert to float, removing any non-numeric characters
+            data[col] = data[col].astype(float)
+        
+        # Sort data by Date in descending order
+        data.sort_values(by='Date', ascending=False, inplace=True)
+        
+        return data
+    except Exception as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return None
 
 # Select ticker based on user choice
 index_tickers = {
