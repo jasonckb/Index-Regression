@@ -83,6 +83,11 @@ monthly_open = st.sidebar.number_input("Input Prediction Month's Open", min_valu
 # Fetch and format price history data
 df_price_history = fetch_and_format_data(index_tickers[index_choice])
 
+# Check if data was fetched successfully
+if df_price_history is None:
+    st.error("Failed to fetch price history data. Please check your internet connection and try again.")
+    st.stop()
+
 # Dropbox direct download link
 dropbox_url = "https://www.dropbox.com/scl/fi/88utrb82zwzlbyo3ljkvl/HSI_SPX-Dashboard.xlsx?rlkey=jobmxd040dyhhs07k9gpmbq6j&dl=1"
 
@@ -101,11 +106,6 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
     except Exception as e:
         st.error(f"An error occurred: {e}")
         return None
-    
-# Check if data was fetched successfully
-if df_price_history is None:
-    st.error("Failed to fetch price history data.")
-    st.stop()
 
 # Create a display copy and format numeric columns
 display_df = df_price_history.copy()
