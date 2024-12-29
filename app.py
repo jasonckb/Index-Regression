@@ -39,30 +39,49 @@ def format_date_column(date_val):
 
 # Function to fetch data from Yahoo Finance and format it
 def fetch_and_format_data(ticker):
-    # Fetch data
-    data = yf.download(ticker, start="1970-01-01")
-     
-    # Ensure date is the index, then reset it to make it a column
-    data.reset_index(inplace=True)
-
-    # Drop the first row which contains non-numeric data
-    data = data.iloc[1:]
-
-    # Format the Date column
-    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
-
-    # Convert numeric columns to float
-    numeric_columns = ['Open', 'High', 'Low', 'Close']
-    for col in numeric_columns:
-        data[col] = pd.to_numeric(data[col], errors='coerce')
-    
-    # Drop any remaining rows with NaN values
-    data = data.dropna(subset=numeric_columns)
-
-    # Sort data by Date in descending order to show the latest data first
-    data.sort_values(by='Date', ascending=False, inplace=True)
-
-    return data
+    try:
+        # Fetch data
+        data = yf.download(ticker, start="1970-01-01")
+        
+        # Print data info for diagnosis
+        st.write("Data types before processing:", data.dtypes)
+        st.write("First few rows before processing:", data.head())
+        
+        # Ensure date is the index, then reset it to make it a column
+        data.reset_index(inplace=True)
+        
+        # Drop the first row which contains non-numeric data
+        data = data.iloc[1:]
+        
+        # Format the Date column
+        data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
+        
+        # Convert numeric columns to float one by one with error handling
+        numeric_columns = ['Open', 'High', 'Low', 'Close']
+        for col in numeric_columns:
+            try:
+                # First try to handle any string formatting
+                if data[col].dtype == object:
+                    data[col] = data[col].astype(str).str.replace(',', '')
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+            except Exception as e:
+                st.error(f"Error converting {col}: {str(e)}")
+                st.write(f"Sample of problematic column {col}:", data[col].head())
+        
+        # Drop any remaining rows with NaN values
+        data = data.dropna(subset=numeric_columns)
+        
+        # Sort data by Date in descending order
+        data.sort_values(by='Date', ascending=False, inplace=True)
+        
+        # Print data info after processing
+        st.write("Data types after processing:", data.dtypes)
+        st.write("First few rows after processing:", data.head())
+        
+        return data
+    except Exception as e:
+        st.error(f"Error in fetch_and_format_data: {str(e)}")
+        return None
 
 # Select ticker based on user choice
 index_tickers = {
