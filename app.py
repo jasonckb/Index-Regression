@@ -43,44 +43,30 @@ def fetch_and_format_data(ticker):
         # Fetch data
         data = yf.download(ticker, start="1970-01-01")
         
-        # Print data info for diagnosis
-        st.write("Data types before processing:", data.dtypes)
-        st.write("First few rows before processing:", data.head())
+        # Convert to DataFrame and reset index
+        df = pd.DataFrame(data).reset_index()
         
-        # Ensure date is the index, then reset it to make it a column
-        data.reset_index(inplace=True)
+        # Format Date column
+        df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
         
-        # Drop the first row which contains non-numeric data
-        data = data.iloc[1:]
-        
-        # Format the Date column
-        data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
-        
-        # Convert numeric columns to float one by one with error handling
+        # Ensure numeric columns are float
         numeric_columns = ['Open', 'High', 'Low', 'Close']
         for col in numeric_columns:
-            try:
-                # First try to handle any string formatting
-                if data[col].dtype == object:
-                    data[col] = data[col].astype(str).str.replace(',', '')
-                data[col] = pd.to_numeric(data[col], errors='coerce')
-            except Exception as e:
-                st.error(f"Error converting {col}: {str(e)}")
-                st.write(f"Sample of problematic column {col}:", data[col].head())
+            # Skip if column doesn't exist
+            if col not in df.columns:
+                continue
+            # Convert to numeric, coercing errors to NaN
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Drop any remaining rows with NaN values
-        data = data.dropna(subset=numeric_columns)
+        # Drop any rows with NaN values in numeric columns
+        df = df.dropna(subset=numeric_columns)
         
-        # Sort data by Date in descending order
-        data.sort_values(by='Date', ascending=False, inplace=True)
+        # Sort by date in descending order
+        df = df.sort_values('Date', ascending=False)
         
-        # Print data info after processing
-        st.write("Data types after processing:", data.dtypes)
-        st.write("First few rows after processing:", data.head())
-        
-        return data
+        return df
     except Exception as e:
-        st.error(f"Error in fetch_and_format_data: {str(e)}")
+        st.error(f"Error in data processing: {str(e)}")
         return None
 
 # Select ticker based on user choice
@@ -116,13 +102,19 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error(f"An error occurred: {e}")
         return None
     
-# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places
-for column in ['Open', 'High', 'Low', 'Close']:
-    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x))
-
-# Display the formatted price history data
-with st.expander(f"View {index_choice} Price History", expanded=True):
-    st.dataframe(df_price_history[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
+# Create a display copy and format numeric columns
+if df_price_history is not None:
+    display_df = df_price_history.copy()
+    numeric_columns = ['Open', 'High', 'Low', 'Close']
+    
+    # Format numeric columns for display
+    for column in numeric_columns:
+        if column in display_df.columns:
+            display_df[column] = display_df[column].map(lambda x: f"{x:,.2f}" if pd.notnull(x) else x)
+    
+    # Display the formatted data
+    with st.expander(f"View {index_choice} Price History", expanded=True):
+        st.dataframe(display_df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
