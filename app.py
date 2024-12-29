@@ -43,7 +43,7 @@ def fetch_and_format_data(ticker):
     """Fetch stock data with caching"""
     try:
         stock = yf.Ticker(ticker)
-        data = stock.history(period="1y")
+        data = stock.history(start="1970-01-01")
         if data.empty:
             raise ValueError(f"No data found for ticker {ticker}")
             
@@ -157,9 +157,17 @@ df_stats = df_stats[desired_columns]
 
 # Function to perform linear regression and plot results
 def plot_index_regression(df, index_name):
-    n = len(df)
+    # Sort data by date in ascending order for regression
+    df_sorted = df.sort_values('Date', ascending=True).copy()
+    
+    n = len(df_sorted)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
-    y = np.log(df['Close']).values  # Logarithmic transformation of the Close price
+    
+    # Handle potential string values in Close column
+    if isinstance(df_sorted['Close'].iloc[0], str):
+        y = np.log(df_sorted['Close'].replace(',', '').astype(float)).values
+    else:
+        y = np.log(df_sorted['Close']).values  # Logarithmic transformation of the Close price
 
     # Perform linear regression on the log-transformed data
     model = LinearRegression().fit(X, y)
@@ -188,13 +196,13 @@ def plot_index_regression(df, index_name):
     hover_font_size = 16  # Base size for hover text, adjust as needed
 
     # Plot actual data points with log-transformed data
-    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Close']), mode='lines', name=f'Actual {index_name} Level (Log)',
+    fig.add_trace(go.Scatter(x=df_sorted['Date'], y=np.log(df_sorted['Close']), mode='lines', name=f'Actual {index_name} Level (Log)',
                              line=dict(color='black'),
-                             hovertemplate='%{text}', text=[f'{y:.0f}' for y in df['Close']],
+                             hovertemplate='%{text}', text=[f'{y:.0f}' for y in df_sorted['Close']],
                              hoverlabel=dict(font=dict(size=hover_font_size))))
 
     # Plot regression line
-    fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
+    fig.add_trace(go.Scatter(x=df_sorted['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
                              line=dict(color='#1C1A1A'),
                              hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in y_pred],
                              hoverlabel=dict(font=dict(size=hover_font_size))))
@@ -210,14 +218,14 @@ def plot_index_regression(df, index_name):
         se_below = y_pred - n * standard_error
 
         # Add SE band above regression line
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
+        fig.add_trace(go.Scatter(x=df_sorted['Date'], y=se_above, mode='lines',
                                  name=f'+{n} SE (Log) ({conf_level})',
                                  line=dict(dash='dot', color=colors_above[n-1], width=line_width),
                                  hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in se_above],
                                  hoverlabel=dict(font=dict(size=hover_font_size))))
 
         # Add SE band below regression line
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
+        fig.add_trace(go.Scatter(x=df_sorted['Date'], y=se_below, mode='lines',
                                  name=f'-{n} SE (Log) ({conf_level})',
                                  line=dict(dash='dot', color=colors_below[n-1], width=line_width),
                                  hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in se_below],
