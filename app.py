@@ -45,15 +45,18 @@ def fetch_and_format_data(ticker):
     # Ensure date is the index, then reset it to make it a column
     data.reset_index(inplace=True)
 
+    # Drop the first row which contains non-numeric data
+    data = data.iloc[1:]
+
     # Format the Date column
     data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
 
-    # Convert numeric columns to float, removing any non-numeric rows
+    # Convert numeric columns to float
     numeric_columns = ['Open', 'High', 'Low', 'Close']
     for col in numeric_columns:
         data[col] = pd.to_numeric(data[col], errors='coerce')
     
-    # Drop any rows with NaN values in numeric columns
+    # Drop any remaining rows with NaN values
     data = data.dropna(subset=numeric_columns)
 
     # Sort data by Date in descending order to show the latest data first
