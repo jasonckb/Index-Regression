@@ -38,35 +38,37 @@ def format_date_column(date_val):
     return date_val
 
 # Function to fetch data from Yahoo Finance and format it
+@st.cache_data(ttl=3600)
 def fetch_and_format_data(ticker):
+    """Fetch stock data with caching"""
     try:
-        # Fetch data
-        data = yf.download(ticker, start="1970-01-01")
-        
-        # Convert to DataFrame and reset index
-        df = pd.DataFrame(data).reset_index()
+        stock = yf.Ticker(ticker)
+        data = stock.history(period="1y")
+        if data.empty:
+            raise ValueError(f"No data found for ticker {ticker}")
+            
+        # Reset index to make Date a column
+        data = data.reset_index()
         
         # Format Date column
-        df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+        data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
         
         # Ensure numeric columns are float
         numeric_columns = ['Open', 'High', 'Low', 'Close']
         for col in numeric_columns:
-            # Skip if column doesn't exist
-            if col not in df.columns:
-                continue
-            # Convert to numeric, coercing errors to NaN
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
         
-        # Drop any rows with NaN values in numeric columns
-        df = df.dropna(subset=numeric_columns)
+        # Drop any NaN values
+        data = data.dropna(subset=numeric_columns)
         
-        # Sort by date in descending order
-        df = df.sort_values('Date', ascending=False)
+        # Sort by date
+        data = data.sort_values('Date', ascending=False)
         
-        return df
+        return data.dropna()
     except Exception as e:
-        st.error(f"Error in data processing: {str(e)}")
+        st.error(f"Failed to fetch price history data. Please check your internet connection and try again.")
+        st.error(f"Error details: {str(e)}")
         return None
 
 # Select ticker based on user choice
