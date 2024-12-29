@@ -40,6 +40,7 @@ def format_date_column(date_val):
     return date_val
 
 # Function to fetch data from Yahoo Finance and format it
+@st.cache_data(show_spinner=False)
 def fetch_and_format_data(ticker):
     try:
         # Fetch data with error handling
@@ -48,27 +49,24 @@ def fetch_and_format_data(ticker):
             st.error(f"No data received for {ticker}")
             return None
         
-        # Reset index to make Date a column
-        data.reset_index(inplace=True)
+        # Convert to DataFrame and reset index
+        df = pd.DataFrame(data).reset_index()
         
         # Format the Date column
-        data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m-%d')
+        df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
         
         # Sort data by Date in descending order
-        data.sort_values(by='Date', ascending=False, inplace=True)
-        
-        # Remove any rows where Close column contains '^HSI'
-        data = data[~data['Close'].astype(str).str.contains('^HSI', na=False)]
+        df = df.sort_values(by='Date', ascending=False)
         
         # Ensure numeric columns are float type
         numeric_columns = ['Open', 'High', 'Low', 'Close']
         for col in numeric_columns:
-            data[col] = pd.to_numeric(data[col], errors='coerce')
+            df[col] = pd.to_numeric(df[col], errors='coerce')
             
         # Drop any rows with NaN values
-        data = data.dropna(subset=numeric_columns)
+        df = df.dropna(subset=numeric_columns)
         
-        return data
+        return df
     except Exception as e:
         st.error(f"Error fetching data: {str(e)}")
         return None
@@ -106,29 +104,59 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error(f"An error occurred: {e}")
         return None
     
-# Create a copy of the dataframe for display
-df_display = df_price_history.copy()
-
-# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places for display only
-for column in ['Open', 'High', 'Low', 'Close']:
-    df_display[column] = df_display[column].apply(lambda x: format_decimal(x) if isinstance(x, (int, float)) else x)
-
-# Display the formatted price history data
-with st.expander(f"View {index_choice} Price History", expanded=True):
-    st.dataframe(df_display[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
+# Format and display the price history data
+if df_price_history is not None:
+    # Create a copy for display
+    display_df = pd.DataFrame(df_price_history).copy()
+    
+    # Format numeric columns
+    for column in ['Open', 'High', 'Low', 'Close']:
+        display_df[column] = display_df[column].apply(
+            lambda x: format_decimal(x) if pd.notnull(x) and isinstance(x, (int, float)) else x
+        )
+    
+    # Display the formatted data
+    with st.expander(f"View {index_choice} Price History", expanded=True):
+        st.dataframe(display_df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # This line defines pred_sheet_name
 
-# Load the data
-df_price = fetch_and_format_data(index_tickers[index_choice])
-df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14).copy()
-df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name).copy() # Ensure pred_sheet_name is defined before this line
-
-# Verify data is loaded
-if df_price is None or df_stats is None or df_pred is None:
-    st.error("Failed to load data. Please check the Dropbox link and try again.")
+# Load the data with explicit DataFrame creation
+try:
+    # Load price data
+    df_price = fetch_and_format_data(index_tickers[index_choice])
+    if df_price is None:
+        st.error("Failed to load price data.")
+        st.stop()
+    
+    # Load stats data
+    stats_data = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
+    if stats_data is None:
+        st.error("Failed to load statistics data.")
+        st.stop()
+    df_stats = pd.DataFrame(stats_data)
+    
+    # Load prediction data
+    pred_data = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
+    if pred_data is None:
+        st.error("Failed to load prediction data.")
+        st.stop()
+    df_pred = pd.DataFrame(pred_data)
+    
+    # Convert stats columns to appropriate types
+    for col in df_stats.columns:
+        if col not in ['Month of Year', 'Date of Largest Rise', 'Date of Largest Drop']:
+            df_stats[col] = pd.to_numeric(df_stats[col], errors='coerce')
+    
+    # Convert prediction columns to appropriate types
+    for col in df_pred.columns:
+        if col != 'Month':
+            df_pred[col] = pd.to_numeric(df_pred[col], errors='coerce')
+            
+except Exception as e:
+    st.error(f"Error loading data: {str(e)}")
     st.stop()
 
 # Define the columns you want to keep
