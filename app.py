@@ -102,33 +102,45 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error(f"An error occurred: {e}")
         return None
     
+# Check if data was fetched successfully
+if df_price_history is None:
+    st.error("Failed to fetch price history data.")
+    st.stop()
+
 # Create a display copy and format numeric columns
-if df_price_history is not None:
-    display_df = df_price_history.copy()
-    numeric_columns = ['Open', 'High', 'Low', 'Close']
-    
-    # Format numeric columns for display
-    for column in numeric_columns:
-        if column in display_df.columns:
-            display_df[column] = display_df[column].map(lambda x: f"{x:,.2f}" if pd.notnull(x) else x)
-    
-    # Display the formatted data
-    with st.expander(f"View {index_choice} Price History", expanded=True):
-        st.dataframe(display_df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
+display_df = df_price_history.copy()
+numeric_columns = ['Open', 'High', 'Low', 'Close']
+
+# Format numeric columns for display
+for column in numeric_columns:
+    if column in display_df.columns:
+        display_df[column] = display_df[column].map(lambda x: f"{x:,.2f}" if pd.notnull(x) else x)
+
+# Display the formatted data
+with st.expander(f"View {index_choice} Price History", expanded=True):
+    st.dataframe(display_df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # This line defines pred_sheet_name
 
-# Load the data
+# Load the data with error handling
 df_price = fetch_and_format_data(index_tickers[index_choice])
-df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14).copy()
-df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name).copy() # Ensure pred_sheet_name is defined before this line
-
-# Verify data is loaded
-if df_price is None or df_stats is None or df_pred is None:
-    st.error("Failed to load data. Please check the Dropbox link and try again.")
+if df_price is None:
+    st.error("Failed to fetch price data.")
     st.stop()
+
+df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
+if df_stats is None:
+    st.error("Failed to load statistics data.")
+    st.stop()
+df_stats = df_stats.copy()
+
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
+if df_pred is None:
+    st.error("Failed to load prediction data.")
+    st.stop()
+df_pred = df_pred.copy()
 
 # Define the columns you want to keep
 desired_columns = [
