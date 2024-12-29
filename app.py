@@ -147,6 +147,9 @@ def plot_index_regression(df, index_name):
     # Drop any NaN values
     df = df.dropna(subset=['Close'])
     
+    # Sort by date in ascending order for regression
+    df = df.sort_values('Date', ascending=True)
+    
     n = len(df)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
     y = np.log(df['Close']).values  # Logarithmic transformation of the Close price
@@ -177,16 +180,16 @@ def plot_index_regression(df, index_name):
     # Hover font size adjustment
     hover_font_size = 16  # Base size for hover text, adjust as needed
 
-    # Plot actual data points with log-transformed data
-    fig.add_trace(go.Scatter(x=df['Date'], y=y, mode='lines', name=f'Actual {index_name} Level (Log)',
+    # Plot actual data points with actual values
+    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name=f'Actual {index_name} Level',
                              line=dict(color='black'),
-                             hovertemplate='%{text}', text=[f'{np.exp(val):.0f}' for val in y],
+                             hovertemplate='%{y:,.0f}<extra></extra>',
                              hoverlabel=dict(font=dict(size=hover_font_size))))
 
-    # Plot regression line
-    fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
+    # Plot regression line with actual values
+    fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(y_pred), mode='lines', name='Regression Line',
                              line=dict(color='#1C1A1A'),
-                             hovertemplate='%{y:.0f}<extra></extra>',
+                             hovertemplate='%{y:,.0f}<extra></extra>',
                              hoverlabel=dict(font=dict(size=hover_font_size))))
     # Define colors for the confidence lines
     colors_above = ['#00C9F9', '#004FF9', '#032979']  # For lines above the regression
@@ -199,32 +202,53 @@ def plot_index_regression(df, index_name):
         se_above = y_pred + n * standard_error
         se_below = y_pred - n * standard_error
 
-        # Add SE band above regression line
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
-                                name=f'+{n} SE (Log) ({conf_level})',
+        # Add SE band above regression line with actual values
+        fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(se_above), mode='lines',
+                                name=f'+{n} SE ({conf_level})',
                                 line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-                                hovertemplate='%{y:.0f}<extra></extra>',
+                                hovertemplate='%{y:,.0f}<extra></extra>',
                                 hoverlabel=dict(font=dict(size=hover_font_size))))
 
-        # Add SE band below regression line
-        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
-                                name=f'-{n} SE (Log) ({conf_level})',
+        # Add SE band below regression line with actual values
+        fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(se_below), mode='lines',
+                                name=f'-{n} SE ({conf_level})',
                                 line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-                                hovertemplate='%{y:.0f}<extra></extra>',
+                                hovertemplate='%{y:,.0f}<extra></extra>',
                                 hoverlabel=dict(font=dict(size=hover_font_size))))
         
-    # Update plot layout with increased font size
+    # Update plot layout with increased font size and log scale toggle
     fig.update_layout(
         title={
-            'text': f'{index_name} Linear Regression with Confidence Bands - Log Scale(R² = {r2:.2f})',
+            'text': f'{index_name} Linear Regression with Confidence Bands (R² = {r2:.2f})',
             'y':0.9,
             'x':0.5,
             'xanchor': 'center',
             'yanchor': 'top',
             'font': {'size': 19}  # Adjust title font size here
         },
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="right",
+                x=0.7,
+                y=1.2,
+                showactive=True,
+                buttons=[
+                    dict(
+                        label="Linear Scale",
+                        method="relayout",
+                        args=[{"yaxis.type": "linear"}]
+                    ),
+                    dict(
+                        label="Log Scale",
+                        method="relayout",
+                        args=[{"yaxis.type": "log"}]
+                    )
+                ]
+            )
+        ],
         xaxis_title='Date',
-        yaxis_title='Log(Close Price)',
+        yaxis_title='Close Price',
         legend_title='Legend',
         xaxis=dict(
             titlefont=dict(size=15),  # Adjust x-axis title font size here
@@ -237,7 +261,7 @@ def plot_index_regression(df, index_name):
         legend=dict(
             font=dict(size=15)  # Adjust legend font size here
         ),
-        yaxis_tickformat='.1f',  # Set tick format for y-axis
+        yaxis_tickformat=',',  # Set tick format for y-axis to show commas for thousands
         height=800  # Custom height for the chart
     )
 
