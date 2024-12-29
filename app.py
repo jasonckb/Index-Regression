@@ -17,8 +17,6 @@ def format_decimal(value):
     if pd.isnull(value):
         return None
     try:
-        if isinstance(value, str):
-            value = float(value.replace(',', ''))  # Convert string to float if needed
         return f"{value:,.0f}"  # Format numbers >= 1 with commas and no decimal places
     except ValueError:
         return value  # If conversion fails, return the original value
@@ -40,36 +38,28 @@ def format_date_column(date_val):
     return date_val
 
 # Function to fetch data from Yahoo Finance and format it
-@st.cache_data(show_spinner=False)
 def fetch_and_format_data(ticker):
-    try:
-        # Fetch data with error handling
-        data = yf.download(ticker, start="1970-01-01")
-        if data.empty:
-            st.error(f"No data received for {ticker}")
-            return None
-        
-        # Convert to DataFrame and reset index
-        df = pd.DataFrame(data).reset_index()
-        
-        # Format the Date column
-        df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
-        
-        # Sort data by Date in descending order
-        df = df.sort_values(by='Date', ascending=False)
-        
-        # Ensure numeric columns are float type
-        numeric_columns = ['Open', 'High', 'Low', 'Close']
-        for col in numeric_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-        # Drop any rows with NaN values
-        df = df.dropna(subset=numeric_columns)
-        
-        return df
-    except Exception as e:
-        st.error(f"Error fetching data: {str(e)}")
-        return None
+    # Fetch data
+    data = yf.download(ticker, start="1970-01-01")
+     
+    # Ensure date is the index, then reset it to make it a column
+    data.reset_index(inplace=True)
+
+    # Format the Date column
+    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
+
+    # Convert numeric columns to float, removing any non-numeric rows
+    numeric_columns = ['Open', 'High', 'Low', 'Close']
+    for col in numeric_columns:
+        data[col] = pd.to_numeric(data[col], errors='coerce')
+    
+    # Drop any rows with NaN values in numeric columns
+    data = data.dropna(subset=numeric_columns)
+
+    # Sort data by Date in descending order to show the latest data first
+    data.sort_values(by='Date', ascending=False, inplace=True)
+
+    return data
 
 # Select ticker based on user choice
 index_tickers = {
@@ -104,59 +94,26 @@ def load_data_from_dropbox(url, sheet_name, nrows=None):
         st.error(f"An error occurred: {e}")
         return None
     
-# Format and display the price history data
-if df_price_history is not None:
-    # Create a copy for display
-    display_df = pd.DataFrame(df_price_history).copy()
-    
-    # Format numeric columns
-    for column in ['Open', 'High', 'Low', 'Close']:
-        display_df[column] = display_df[column].apply(
-            lambda x: format_decimal(x) if pd.notnull(x) and isinstance(x, (int, float)) else x
-        )
-    
-    # Display the formatted data
-    with st.expander(f"View {index_choice} Price History", expanded=True):
-        st.dataframe(display_df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
+# Format 'Open', 'High', 'Low', and 'Close' columns to 0 decimal places
+for column in ['Open', 'High', 'Low', 'Close']:
+    df_price_history[column] = df_price_history[column].apply(lambda x: format_decimal(x))
+
+# Display the formatted price history data
+with st.expander(f"View {index_choice} Price History", expanded=True):
+    st.dataframe(df_price_history[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']])
 
 # Define the sheet names based on the index_choice
 stats_sheet_name = 'HSI Stat' if index_choice == "HSI" else 'SPX Stat'
 pred_sheet_name = 'HSI Pred' if index_choice == "HSI" else 'SPX Pred'  # This line defines pred_sheet_name
 
-# Load the data with explicit DataFrame creation
-try:
-    # Load price data
-    df_price = fetch_and_format_data(index_tickers[index_choice])
-    if df_price is None:
-        st.error("Failed to load price data.")
-        st.stop()
-    
-    # Load stats data
-    stats_data = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14)
-    if stats_data is None:
-        st.error("Failed to load statistics data.")
-        st.stop()
-    df_stats = pd.DataFrame(stats_data)
-    
-    # Load prediction data
-    pred_data = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name)
-    if pred_data is None:
-        st.error("Failed to load prediction data.")
-        st.stop()
-    df_pred = pd.DataFrame(pred_data)
-    
-    # Convert stats columns to appropriate types
-    for col in df_stats.columns:
-        if col not in ['Month of Year', 'Date of Largest Rise', 'Date of Largest Drop']:
-            df_stats[col] = pd.to_numeric(df_stats[col], errors='coerce')
-    
-    # Convert prediction columns to appropriate types
-    for col in df_pred.columns:
-        if col != 'Month':
-            df_pred[col] = pd.to_numeric(df_pred[col], errors='coerce')
-            
-except Exception as e:
-    st.error(f"Error loading data: {str(e)}")
+# Load the data
+df_price = fetch_and_format_data(index_tickers[index_choice])
+df_stats = load_data_from_dropbox(dropbox_url, sheet_name=stats_sheet_name, nrows=14).copy()
+df_pred = load_data_from_dropbox(dropbox_url, sheet_name=pred_sheet_name).copy() # Ensure pred_sheet_name is defined before this line
+
+# Verify data is loaded
+if df_price is None or df_stats is None or df_pred is None:
+    st.error("Failed to load data. Please check the Dropbox link and try again.")
     st.stop()
 
 # Define the columns you want to keep
@@ -172,12 +129,6 @@ df_stats = df_stats[desired_columns]
 
 # Function to perform linear regression and plot results
 def plot_index_regression(df, index_name):
-    # Drop any NaN values
-    df = df.dropna(subset=['Close'])
-    
-    # Sort by date in ascending order for regression
-    df = df.sort_values('Date', ascending=True)
-    
     n = len(df)
     X = np.arange(1, n + 1).reshape(-1, 1)  # Independent variable: sequential numbers
     y = np.log(df['Close']).values  # Logarithmic transformation of the Close price
@@ -208,16 +159,16 @@ def plot_index_regression(df, index_name):
     # Hover font size adjustment
     hover_font_size = 16  # Base size for hover text, adjust as needed
 
-    # Plot actual data points with actual values
-    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name=f'Actual {index_name} Level',
+    # Plot actual data points with log-transformed data
+    fig.add_trace(go.Scatter(x=df['Date'], y=np.log(df['Close']), mode='lines', name=f'Actual {index_name} Level (Log)',
                              line=dict(color='black'),
-                             hovertemplate='%{y:,.0f}<extra></extra>',
+                             hovertemplate='%{text}', text=[f'{y:.0f}' for y in df['Close']],
                              hoverlabel=dict(font=dict(size=hover_font_size))))
 
-    # Plot regression line with actual values
-    fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(y_pred), mode='lines', name='Regression Line',
+    # Plot regression line
+    fig.add_trace(go.Scatter(x=df['Date'], y=y_pred, mode='lines', name='Regression Line (Log)',
                              line=dict(color='#1C1A1A'),
-                             hovertemplate='%{y:,.0f}<extra></extra>',
+                             hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in y_pred],
                              hoverlabel=dict(font=dict(size=hover_font_size))))
     # Define colors for the confidence lines
     colors_above = ['#00C9F9', '#004FF9', '#032979']  # For lines above the regression
@@ -230,53 +181,32 @@ def plot_index_regression(df, index_name):
         se_above = y_pred + n * standard_error
         se_below = y_pred - n * standard_error
 
-        # Add SE band above regression line with actual values
-        fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(se_above), mode='lines',
-                                name=f'+{n} SE ({conf_level})',
-                                line=dict(dash='dot', color=colors_above[n-1], width=line_width),
-                                hovertemplate='%{y:,.0f}<extra></extra>',
-                                hoverlabel=dict(font=dict(size=hover_font_size))))
+        # Add SE band above regression line
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_above, mode='lines',
+                                 name=f'+{n} SE (Log) ({conf_level})',
+                                 line=dict(dash='dot', color=colors_above[n-1], width=line_width),
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in se_above],
+                                 hoverlabel=dict(font=dict(size=hover_font_size))))
 
-        # Add SE band below regression line with actual values
-        fig.add_trace(go.Scatter(x=df['Date'], y=np.exp(se_below), mode='lines',
-                                name=f'-{n} SE ({conf_level})',
-                                line=dict(dash='dot', color=colors_below[n-1], width=line_width),
-                                hovertemplate='%{y:,.0f}<extra></extra>',
-                                hoverlabel=dict(font=dict(size=hover_font_size))))
+        # Add SE band below regression line
+        fig.add_trace(go.Scatter(x=df['Date'], y=se_below, mode='lines',
+                                 name=f'-{n} SE (Log) ({conf_level})',
+                                 line=dict(dash='dot', color=colors_below[n-1], width=line_width),
+                                 hovertemplate='%{text}', text=[f'{np.exp(y):.0f}' for y in se_below],
+                                 hoverlabel=dict(font=dict(size=hover_font_size))))
         
-    # Update plot layout with increased font size and log scale toggle
+    # Update plot layout with increased font size
     fig.update_layout(
         title={
-            'text': f'{index_name} Linear Regression with Confidence Bands (R² = {r2:.2f})',
+            'text': f'{index_name} Linear Regression with Confidence Bands - Log Scale(R² = {r2:.2f})',
             'y':0.9,
             'x':0.5,
             'xanchor': 'center',
             'yanchor': 'top',
             'font': {'size': 19}  # Adjust title font size here
         },
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="right",
-                x=0.7,
-                y=1.2,
-                showactive=True,
-                buttons=[
-                    dict(
-                        label="Linear Scale",
-                        method="relayout",
-                        args=[{"yaxis.type": "linear"}]
-                    ),
-                    dict(
-                        label="Log Scale",
-                        method="relayout",
-                        args=[{"yaxis.type": "log"}]
-                    )
-                ]
-            )
-        ],
         xaxis_title='Date',
-        yaxis_title='Close Price',
+        yaxis_title='Log(Close Price)',
         legend_title='Legend',
         xaxis=dict(
             titlefont=dict(size=15),  # Adjust x-axis title font size here
@@ -289,7 +219,7 @@ def plot_index_regression(df, index_name):
         legend=dict(
             font=dict(size=15)  # Adjust legend font size here
         ),
-        yaxis_tickformat=',',  # Set tick format for y-axis to show commas for thousands
+        yaxis_tickformat='.1f',  # Set tick format for y-axis
         height=800  # Custom height for the chart
     )
 
